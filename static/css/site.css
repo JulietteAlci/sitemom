@@ -169,3 +169,13 @@ tr.total th, tr.total td, tfoot th { font-weight: 500; }
 .code-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-block: 20px; }
 .code-form input { max-width: 260px; text-transform: uppercase; }
 .credit-code { font-family: var(--serif); font-size: 2rem; letter-spacing: .08em; background: var(--paper); border: 1px dashed var(--gold); padding: 12px 20px; display: inline-block; user-select: all; }
+
+/* Demo payment mode */
+.demo-banner { background: #f3e3b5; color: var(--ink); text-align: center; font-size: .8rem; padding: 6px 16px; }
+.demo-checkout { display: grid; gap: 48px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .demo-checkout { grid-template-columns: 1fr 1fr; } }
+.demo-checkout__amount { font-family: var(--serif); font-size: 2.6rem; margin: 0; }
+.demo-checkout__form { background: var(--paper); border: 1px solid var(--line); padding: 28px; }
+.demo-card { border: 1px solid var(--line); padding: 16px; }
+.demo-card input { background: var(--ivory); color: var(--muted); }
+.demo-card__row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }

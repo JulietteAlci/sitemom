@@ -5,9 +5,10 @@ import stripe
 from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -17,13 +18,15 @@ from apps.trialkit.models import TrialKitOrder, normalize_code
 
 from . import payments
 from .cart import Cart
-from .forms import AddToCartForm
+from .forms import AddToCartForm, DemoCheckoutForm
 from .models import Order, OrderItem
 
 logger = logging.getLogger(__name__)
 
 # Stripe metadata "kind" → model handling the payment.
 CHECKOUT_MODELS = {"order": Order, "trial_kit": TrialKitOrder}
+# kind → (success URL name, cancel URL name), used by the demo checkout.
+CHECKOUT_URLS = {"order": ("orders:success", "orders:cart"), "trial_kit": ("trialkit:success", "trialkit:start")}
 
 
 PENDING_ORDER_SESSION_KEY = "pending_order_id"
@@ -64,7 +67,7 @@ def _abandon_previous_checkout(request):
     ).first()
     if order is None:
         return
-    if order.stripe_session_id:
+    if order.stripe_session_id and not payments.is_demo_session(order.stripe_session_id):
         try:
             stripe.checkout.Session.expire(order.stripe_session_id, api_key=settings.STRIPE_SECRET_KEY)
         except stripe.StripeError:
@@ -205,3 +208,67 @@ def stripe_webhook(request):
     else:
         obj.mark_cancelled()
     return HttpResponse(status=200)
+
+
+def _find_demo_checkout(session_id):
+    for kind, model in CHECKOUT_MODELS.items():
+        obj = model.objects.filter(stripe_session_id=session_id).first()
+        if obj is not None:
+            return kind, obj
+    raise Http404
+
+
+def demo_checkout(request, session_id):
+    """Simulated Stripe Checkout page, available in demo mode only. Nothing is charged."""
+    if not settings.STRIPE_DEMO_MODE or not payments.is_demo_session(session_id):
+        raise Http404
+    kind, obj = _find_demo_checkout(session_id)
+    success_name, cancel_name = CHECKOUT_URLS[kind]
+    expired = timezone.now() - obj.created_at > payments.CHECKOUT_LIFETIME
+
+    if obj.status == obj.Status.PAID:
+        return redirect(f"{reverse(success_name)}?session_id={session_id}")
+    if obj.status == obj.Status.CANCELLED or expired:
+        obj.mark_cancelled()
+        messages.error(request, "Cette session de paiement a expiré. Merci de recommencer.")
+        return redirect(cancel_name)
+
+    form = DemoCheckoutForm(request.POST or None)
+    if request.method == "POST" and "cancel" in request.POST:
+        obj.mark_cancelled()
+        return redirect(cancel_name)
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        # Same shape as a Stripe Checkout Session, handled exactly like the webhook would.
+        obj.mark_paid(
+            {
+                "id": session_id,
+                "payment_status": "paid",
+                "payment_intent": f"demo_pi_{obj.pk}",
+                "customer_details": {"email": data["email"], "name": data["name"], "phone": data["phone"]},
+                "collected_information": {
+                    "shipping_details": {
+                        "name": data["name"],
+                        "address": {
+                            "line1": data["line1"],
+                            "postal_code": data["postal_code"],
+                            "city": data["city"],
+                            "country": data["country"],
+                        },
+                    }
+                },
+            }
+        )
+        return redirect(f"{reverse(success_name)}?session_id={session_id}")
+
+    if kind == "order":
+        lines = [(f"{item.ring_name} — taille {item.size}", item.quantity, item.line_total) for item in obj.items.all()]
+        amount, discount = obj.total, obj.discount
+    else:
+        lines = [(f"Coffret d'essai — {obj.rings.count()} alliances", 1, obj.price)]
+        amount, discount = obj.price, 0
+    return render(
+        request,
+        "orders/demo_checkout.html",
+        {"obj": obj, "form": form, "lines": lines, "amount": amount, "discount": discount},
+    )

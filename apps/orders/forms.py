@@ -1,6 +1,7 @@
 from django import forms
 
 from .cart import MAX_QUANTITY
+from .payments import SHIPPING_COUNTRIES
 
 
 class AddToCartForm(forms.Form):
@@ -26,3 +27,20 @@ class AddToCartForm(forms.Form):
 
     def clean_engraving(self):
         return self.cleaned_data.get("engraving", "").strip()
+
+
+COUNTRY_NAMES = {"FR": "France", "BE": "Belgique", "LU": "Luxembourg", "CH": "Suisse", "MC": "Monaco"}
+
+
+class DemoCheckoutForm(forms.Form):
+    """Customer details collected by the simulated Stripe Checkout page (demo mode)."""
+
+    email = forms.EmailField(label="E-mail")
+    name = forms.CharField(label="Nom complet", max_length=200)
+    phone = forms.CharField(label="Téléphone", max_length=40, required=False)
+    line1 = forms.CharField(label="Adresse", max_length=200)
+    postal_code = forms.CharField(label="Code postal", max_length=20)
+    city = forms.CharField(label="Ville", max_length=100)
+    country = forms.ChoiceField(
+        label="Pays", choices=[(code, COUNTRY_NAMES.get(code, code)) for code in SHIPPING_COUNTRIES], initial="FR"
+    )

@@ -11,6 +11,7 @@ from .models import TrialKitOrder, normalize_code
 
 @override_settings(
     STRIPE_SECRET_KEY="sk_test",
+    STRIPE_DEMO_MODE=False,
     STRIPE_WEBHOOK_SECRET=WEBHOOK_SECRET,
     TRIAL_KIT_MIN=8,
     TRIAL_KIT_MAX=12,

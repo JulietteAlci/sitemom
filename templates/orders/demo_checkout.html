@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load seo %}
+{% block title %}Paiement (démo) — {{ SITE_NAME }}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<section class="section container demo-checkout">
+  <div class="demo-checkout__summary">
+    <p class="eyebrow">Récapitulatif · {{ obj.reference }}</p>
+    <p class="demo-checkout__amount">{{ amount|euros }}</p>
+    <table>
+      {% for label, quantity, total in lines %}
+        <tr><td>{{ label }}{% if quantity > 1 %} × {{ quantity }}{% endif %}</td><td>{{ total|euros }}</td></tr>
+      {% endfor %}
+      {% if discount %}<tr><td>Coffret d'essai déduit ({{ obj.trial_kit.credit_code }})</td><td>−{{ discount|euros }}</td></tr>{% endif %}
+      <tr class="total"><th>Total à payer</th><td>{{ amount|euros }}</td></tr>
+    </table>
+  </div>
+
+  <form method="post" class="demo-checkout__form stack" novalidate>
+    {% csrf_token %}
+    <p class="message message--warning"><strong>Paiement simulé (mode démo).</strong> Aucune carte n'est débitée. Cette page remplace Stripe Checkout tant que les clés Stripe ne sont pas configurées.</p>
+
+    <h1 class="h3">Coordonnées et livraison</h1>
+    {{ form.as_div }}
+
+    <h2 class="h3">Carte bancaire</h2>
+    <div class="demo-card" aria-hidden="true">
+      <label>Numéro de carte<input type="text" value="4242 4242 4242 4242" disabled></label>
+      <div class="demo-card__row">
+        <label>Expiration<input type="text" value="12 / 34" disabled></label>
+        <label>CVC<input type="text" value="123" disabled></label>
+      </div>
+    </div>
+
+    <button class="btn btn--block" type="submit">Payer {{ amount|euros }}</button>
+    <button class="link" type="submit" name="cancel" value="1" formnovalidate>Annuler et revenir au site</button>
+  </form>
+</section>
+{% endblock %}

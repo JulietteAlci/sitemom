@@ -23,6 +23,7 @@
   {% block structured_data %}{% endblock %}
 </head>
 <body>
+  {% if STRIPE_DEMO_MODE %}<div class="demo-banner">Mode démonstration : les paiements sont simulés, aucune carte n'est débitée.</div>{% endif %}
   <div class="ticker" role="status">
     {% if gold_spot %}
       Cours de l'or : <strong>{{ gold_spot.price_per_gram_eur|floatformat:2 }} €/g</strong>

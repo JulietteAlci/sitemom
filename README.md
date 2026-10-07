@@ -63,6 +63,16 @@ python manage.py runserver
 
 Cours de l'or : planifier `python manage.py update_gold_price` (cron toutes les 15 min, par exemple).
 
+### Mode démo des paiements (par défaut)
+
+Tant qu'aucune clé Stripe n'est configurée (`STRIPE_DEMO_MODE=1`), le bouton de paiement mène à une page de paiement **simulée** sur le site : on saisit ses coordonnées, on clique sur « Payer » et la commande ou le coffret passe en « Payé », sans débit. Un bandeau signale ce mode sur tout le site. Cela permet de faire tout le parcours :
+
+1. `/coffret-essai/` : choisir 8 à 12 alliances, payer 80 € en démo et noter le code `ESSAI-XXXX-XXXX` ;
+2. ajouter une alliance au panier, saisir le code (−80 €) et payer en démo ;
+3. vérifier la commande et le coffret (« Converti en commande ») dans `/admin/`.
+
+Le mode démo est refusé au démarrage si une clé `sk_live_` est configurée. Pour passer sur Stripe : `STRIPE_DEMO_MODE=0` et renseigner les clés (`sk_test_…` d'abord, carte de test `4242 4242 4242 4242`).
+
 Webhook Stripe en local :
 
 ```bash

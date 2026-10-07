@@ -75,9 +75,12 @@ class Command(BaseCommand):
     help = "Create demo rings, blog posts and a gold spot price."
 
     def handle(self, *args, **options):
-        if not GoldPrice.objects.exists():
-            GoldPrice.objects.create(price_per_oz_eur=Decimal("3500"), source="manual", fetched_at=timezone.now())
-            self.stdout.write("Cours de l'or de démonstration : 3500 €/oz")
+        current = GoldPrice.current()
+        if current is None or not current.is_fresh:
+            # A stale quote blocks payments: re-date the demo quote so the purchase flow can be tested.
+            price = current.price_per_oz_eur if current else Decimal("3500")
+            GoldPrice.objects.create(price_per_oz_eur=price, source="manual", fetched_at=timezone.now())
+            self.stdout.write(f"Cours de l'or de démonstration : {price:.0f} €/oz")
 
         for position, (name, gender, color, width, thickness, profile, finish, weight, stones, stone_cost, featured) in enumerate(RINGS):
             slug = slugify(f"alliance {name}")

@@ -35,7 +35,9 @@ def fake_session(**kwargs):
     return SimpleNamespace(id="cs_test_123", url="https://checkout.stripe.com/c/pay/cs_test_123")
 
 
-@override_settings(STRIPE_SECRET_KEY="sk_test", STRIPE_WEBHOOK_SECRET=WEBHOOK_SECRET, VAT_RATE="0.20")
+@override_settings(
+    STRIPE_SECRET_KEY="sk_test", STRIPE_DEMO_MODE=False, STRIPE_WEBHOOK_SECRET=WEBHOOK_SECRET, VAT_RATE="0.20"
+)
 class CheckoutTests(TestCase):
     def setUp(self):
         GoldPrice.objects.create(price_per_oz_eur=TROY_OUNCE_GRAMS * 100, source="test")
@@ -148,7 +150,9 @@ class WebhookTests(TestCase):
         self.assertEqual(self.order.status, Order.Status.CANCELLED)
 
 
-@override_settings(STRIPE_SECRET_KEY="sk_test", STRIPE_WEBHOOK_SECRET=WEBHOOK_SECRET, VAT_RATE="0.20")
+@override_settings(
+    STRIPE_SECRET_KEY="sk_test", STRIPE_DEMO_MODE=False, STRIPE_WEBHOOK_SECRET=WEBHOOK_SECRET, VAT_RATE="0.20"
+)
 class TrialKitCreditTests(TestCase):
     """Step 4 of the customer journey: the trial kit price is deducted with its unique code."""
 
@@ -240,3 +244,101 @@ class TrialKitCreditTests(TestCase):
         self.kit.refresh_from_db()
         self.assertEqual(self.kit.fulfillment, self.kit.Fulfillment.CONVERTED)
         self.assertEqual(self.kit.redeemed_order, order)
+
+
+DEMO_CUSTOMER = {
+    "email": "claire@example.com",
+    "name": "Claire Martin",
+    "phone": "0600000000",
+    "line1": "1 rue de la Paix",
+    "postal_code": "75002",
+    "city": "Paris",
+    "country": "FR",
+}
+
+
+@override_settings(STRIPE_DEMO_MODE=True, STRIPE_SECRET_KEY="", VAT_RATE="0.20", TRIAL_KIT_PRICE_CENTS=8000)
+class DemoModeTests(TestCase):
+    """Demo mode lets the whole customer journey be completed without a Stripe account."""
+
+    def setUp(self):
+        GoldPrice.objects.create(price_per_oz_eur=TROY_OUNCE_GRAMS * 100, source="test")
+        self.rings = [make_ring(name=f"R{i}", slug=f"r{i}", labor_cost=Decimal("99.50")) for i in range(8)]
+
+    def pay(self, response):
+        """Follow the redirect to the demo checkout page and submit it."""
+        demo_url = response["Location"]
+        self.assertIn("/paiement-demo/demo_cs_", demo_url)
+        self.assertContains(self.client.get(demo_url), "Paiement simulé")
+        return self.client.post(demo_url, DEMO_CUSTOMER)
+
+    @mock.patch("apps.orders.payments.stripe")
+    def test_full_customer_journey(self, stripe_module):
+        from apps.trialkit.models import TrialKitOrder
+
+        # 1. Order the trial kit (80 €).
+        response = self.client.post(reverse("trialkit:start"), {"rings": [r.pk for r in self.rings]})
+        response = self.pay(response)
+        kit = TrialKitOrder.objects.get()
+        self.assertRedirects(response, f"{reverse('trialkit:success')}?session_id={kit.stripe_session_id}")
+        kit.refresh_from_db()
+        self.assertEqual((kit.status, kit.email, kit.shipping_address["city"]), ("paid", "claire@example.com", "Paris"))
+        self.assertContains(self.client.get(response["Location"]), kit.credit_code)
+
+        # 4. Order the rings with the unique code: 480 € − 80 €.
+        self.client.post(reverse("orders:cart_add", args=[self.rings[0].slug]), {"size": 54, "quantity": 1})
+        self.client.post(reverse("orders:cart_trial_kit_code"), {"code": kit.credit_code})
+        self.assertEqual(self.client.get(reverse("orders:cart")).context["total"], Decimal("400"))
+        response = self.pay(self.client.post(reverse("orders:checkout")))
+        order = Order.objects.get()
+        self.assertRedirects(response, f"{reverse('orders:success')}?session_id={order.stripe_session_id}")
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.total, order.discount), ("paid", Decimal("400"), Decimal("80")))
+        kit.refresh_from_db()
+        self.assertEqual(kit.fulfillment, kit.Fulfillment.CONVERTED)
+
+        # The code cannot be used twice, and Stripe was never called.
+        self.client.post(reverse("orders:cart_add", args=[self.rings[1].slug]), {"size": 54, "quantity": 1})
+        self.client.post(reverse("orders:cart_trial_kit_code"), {"code": kit.credit_code})
+        self.assertIn("déjà été utilisé", self.client.get(reverse("orders:cart")).context["credit"].error)
+        stripe_module.checkout.Session.create.assert_not_called()
+        stripe_module.Coupon.create.assert_not_called()
+
+    def test_cancel_returns_to_cart(self):
+        self.client.post(reverse("orders:cart_add", args=[self.rings[0].slug]), {"size": 54, "quantity": 1})
+        demo_url = self.client.post(reverse("orders:checkout"))["Location"]
+        self.assertRedirects(self.client.post(demo_url, {"cancel": "1"}), reverse("orders:cart"))
+        self.assertEqual(Order.objects.get().status, Order.Status.CANCELLED)
+
+    def test_invalid_details_redisplay_form(self):
+        self.client.post(reverse("orders:cart_add", args=[self.rings[0].slug]), {"size": 54, "quantity": 1})
+        demo_url = self.client.post(reverse("orders:checkout"))["Location"]
+        response = self.client.post(demo_url, {**DEMO_CUSTOMER, "email": "pas-un-email"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Order.objects.get().status, Order.Status.PENDING)
+
+    def test_retry_after_abandoned_demo_checkout(self):
+        self.client.post(reverse("orders:cart_add", args=[self.rings[0].slug]), {"size": 54, "quantity": 1})
+        self.client.post(reverse("orders:checkout"))
+        self.client.post(reverse("orders:checkout"))
+        first, second = Order.objects.order_by("pk")
+        self.assertEqual((first.status, second.status), (Order.Status.CANCELLED, Order.Status.PENDING))
+
+    def test_expired_session(self):
+        self.client.post(reverse("orders:cart_add", args=[self.rings[0].slug]), {"size": 54, "quantity": 1})
+        demo_url = self.client.post(reverse("orders:checkout"))["Location"]
+        Order.objects.update(created_at=timezone.now() - timedelta(hours=1))
+        self.assertRedirects(self.client.post(demo_url, DEMO_CUSTOMER), reverse("orders:cart"))
+        self.assertEqual(Order.objects.get().status, Order.Status.CANCELLED)
+
+    def test_banner_shown(self):
+        self.assertContains(self.client.get("/"), "Mode démonstration")
+
+    @override_settings(STRIPE_DEMO_MODE=False)
+    def test_demo_page_unavailable_outside_demo_mode(self):
+        order = Order.objects.create(total=480, gold_spot_eur_per_oz=3000, stripe_session_id="demo_cs_x")
+        response = self.client.post(reverse("orders:demo_checkout", args=["demo_cs_x"]), DEMO_CUSTOMER)
+        self.assertEqual(response.status_code, 404)
+        order.refresh_from_db()
+        self.assertEqual(order.status, Order.Status.PENDING)
+        self.assertNotContains(self.client.get("/"), "Mode démonstration")

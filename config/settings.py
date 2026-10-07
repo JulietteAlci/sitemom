@@ -150,6 +150,11 @@ LOGGING = {
 STRIPE_PUBLIC_KEY = env("STRIPE_PUBLIC_KEY", "")
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", "")
+# Demo mode: payments are simulated on a local checkout page, no Stripe account needed.
+# On by default when no Stripe key is configured.
+STRIPE_DEMO_MODE = env_bool("STRIPE_DEMO_MODE", not STRIPE_SECRET_KEY)
+if STRIPE_DEMO_MODE and STRIPE_SECRET_KEY.startswith("sk_live_"):
+    raise RuntimeError("STRIPE_DEMO_MODE cannot be enabled with a live Stripe key.")
 CURRENCY = "eur"
 
 # --- Gold spot price ---

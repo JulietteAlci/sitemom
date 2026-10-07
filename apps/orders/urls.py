@@ -11,5 +11,6 @@ urlpatterns = [
     path("panier/retirer/<str:line_id>/", views.cart_remove, name="cart_remove"),
     path("commande/paiement/", views.checkout, name="checkout"),
     path("commande/confirmation/", views.checkout_success, name="success"),
+    path("paiement-demo/<str:session_id>/", views.demo_checkout, name="demo_checkout"),
     path("stripe/webhook/", views.stripe_webhook, name="stripe_webhook"),
 ]

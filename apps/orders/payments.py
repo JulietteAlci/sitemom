@@ -1,10 +1,13 @@
 """Thin wrapper around Stripe Checkout, shared by ring orders and trial kits."""
 import json
 import logging
+import secrets
+from types import SimpleNamespace
 from datetime import timedelta
 
 import stripe
 from django.conf import settings
+from django.urls import reverse
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -12,6 +15,13 @@ logger = logging.getLogger(__name__)
 SHIPPING_COUNTRIES = ["FR", "BE", "LU", "CH", "MC"]
 # Stripe's minimum lifetime for a Checkout Session; also how long the gold price is locked.
 CHECKOUT_LIFETIME = timedelta(minutes=30)
+
+
+DEMO_SESSION_PREFIX = "demo_cs_"
+
+
+def is_demo_session(session_id: str) -> bool:
+    return session_id.startswith(DEMO_SESSION_PREFIX)
 
 
 class PaymentsNotConfigured(Exception):
@@ -36,7 +46,16 @@ def create_checkout_session(
     *, kind: str, obj, line_items: list[dict], success_url: str, cancel_url: str, discount_cents: int = 0,
     discount_name: str = "",
 ):
-    """Create a Stripe Checkout Session for `obj` (Order or TrialKitOrder) and store its id."""
+    """Create a Stripe Checkout Session for `obj` (Order or TrialKitOrder) and store its id.
+
+    In demo mode, no call is made to Stripe: the customer is sent to a local page that
+    simulates Stripe Checkout (see views.demo_checkout).
+    """
+    if settings.STRIPE_DEMO_MODE:
+        session_id = f"{DEMO_SESSION_PREFIX}{secrets.token_urlsafe(18)}"
+        obj.stripe_session_id = session_id
+        obj.save(update_fields=["stripe_session_id"])
+        return SimpleNamespace(id=session_id, url=reverse("orders:demo_checkout", args=[session_id]))
     if not settings.STRIPE_SECRET_KEY:
         raise PaymentsNotConfigured("STRIPE_SECRET_KEY is not set")
     metadata = {"kind": kind, "object_id": str(obj.pk), "reference": obj.reference}
