@@ -1,17 +1,20 @@
 {% extends "base.html" %}
 {% load seo %}
 {% block title %}Coffret d'essai : essayez {{ kit_min }} à {{ kit_max }} alliances chez vous — {{ SITE_NAME }}{% endblock %}
-{% block meta_description %}Recevez de {{ kit_min }} à {{ kit_max }} alliances en essai à domicile avec un baguier. Livraison et retour offerts, caution remboursée.{% endblock %}
+{% block meta_description %}Recevez de {{ kit_min }} à {{ kit_max }} alliances en essai à domicile avec un baguier. Les {{ price|floatformat:0 }} € du coffret sont déduits de votre commande d'alliances.{% endblock %}
 
 {% block content %}
 <section class="section container">
   <p class="eyebrow">Coffret d'essai</p>
   <h1>Essayez vos alliances chez vous</h1>
   <ol class="steps">
-    <li><strong>Choisissez</strong> de {{ kit_min }} à {{ kit_max }} modèles ci-dessous.</li>
-    <li><strong>Recevez</strong> votre coffret en 48 h, avec un baguier pour mesurer votre tour de doigt.</li>
-    <li><strong>Essayez</strong> pendant 5 jours puis renvoyez-le avec l'étiquette prépayée : votre caution de {{ deposit|euros }} est remboursée.</li>
+    <li><strong>Choisissez</strong> de {{ kit_min }} à {{ kit_max }} modèles ci-dessous et réglez le coffret {{ price|euros }}.</li>
+    <li><strong>Essayez</strong> les alliances chez vous, avec un baguier pour mesurer votre tour de doigt.</li>
+    <li><strong>Renvoyez</strong> le coffret d'essai.</li>
+    <li><strong>Commandez</strong> vos alliances sur le site : votre code unique déduit les {{ price|euros }} du coffret.</li>
+    <li><strong>Recevez</strong> vos alliances, façonnées à la main dans notre atelier.</li>
   </ol>
+  <p class="notice">Sans commande d'alliances sur le site, le prix du coffret n'est pas remboursé. <a href="{% url 'core:how_it_works' %}">En savoir plus</a></p>
 
   <form method="post" class="trial-form" data-min="{{ kit_min }}" data-max="{{ kit_max }}">
     {% csrf_token %}
@@ -38,7 +41,7 @@
 
     <div class="trial-summary">
       <p><span data-counter>{{ selected|length }}</span> / {{ kit_max }} alliances sélectionnées <span class="small">(minimum {{ kit_min }})</span></p>
-      <button class="btn" type="submit" data-submit>Commander mon coffret — caution {{ deposit|euros }}</button>
+      <button class="btn" type="submit" data-submit>Commander mon coffret — {{ price|euros }}</button>
     </div>
   </form>
 </section>

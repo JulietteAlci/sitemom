@@ -162,4 +162,5 @@ VAT_RATE = env("VAT_RATE", "0.20")
 # --- Trial kit ---
 TRIAL_KIT_MIN = int(env("TRIAL_KIT_MIN", "8"))
 TRIAL_KIT_MAX = int(env("TRIAL_KIT_MAX", "12"))
-TRIAL_KIT_DEPOSIT_CENTS = int(env("TRIAL_KIT_DEPOSIT_CENTS", "4900"))
+# Price of the trial kit, deducted from the ring order via a unique code (not refunded otherwise).
+TRIAL_KIT_PRICE_CENTS = int(env("TRIAL_KIT_PRICE_CENTS", "8000"))

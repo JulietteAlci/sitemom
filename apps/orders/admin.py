@@ -12,12 +12,14 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("reference", "created_at", "status", "full_name", "email", "total")
+    list_display = ("reference", "created_at", "status", "full_name", "email", "total", "discount")
     list_filter = ("status",)
     search_fields = ("reference", "email", "full_name", "stripe_session_id")
     readonly_fields = (
         "reference",
         "total",
+        "discount",
+        "trial_kit",
         "gold_spot_eur_per_oz",
         "stripe_session_id",
         "stripe_payment_intent",

@@ -8,4 +8,5 @@ def site(request):
         "canonical_url": settings.SITE_URL + request.path,
         "TRIAL_KIT_MIN": settings.TRIAL_KIT_MIN,
         "TRIAL_KIT_MAX": settings.TRIAL_KIT_MAX,
+        "TRIAL_KIT_PRICE": settings.TRIAL_KIT_PRICE_CENTS // 100,
     }

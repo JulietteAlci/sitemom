@@ -146,3 +146,97 @@ class WebhookTests(TestCase):
         signed_post(self.client, self.event("checkout.session.expired", payment_status="unpaid"))
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.CANCELLED)
+
+
+@override_settings(STRIPE_SECRET_KEY="sk_test", STRIPE_WEBHOOK_SECRET=WEBHOOK_SECRET, VAT_RATE="0.20")
+class TrialKitCreditTests(TestCase):
+    """Step 4 of the customer journey: the trial kit price is deducted with its unique code."""
+
+    def setUp(self):
+        from apps.trialkit.models import TrialKitOrder
+
+        GoldPrice.objects.create(price_per_oz_eur=TROY_OUNCE_GRAMS * 100, source="test")
+        self.ring = make_ring(labor_cost=Decimal("99.50"))  # 480 € TTC
+        self.kit = TrialKitOrder.objects.create(price=80, status=TrialKitOrder.Status.PAID)
+        self.client.post(reverse("orders:cart_add", args=[self.ring.slug]), {"size": 54, "quantity": 1})
+
+    def apply(self, code):
+        return self.client.post(reverse("orders:cart_trial_kit_code"), {"code": code})
+
+    def cart(self):
+        return self.client.get(reverse("orders:cart")).context
+
+    def test_valid_code_is_deducted(self):
+        self.apply(self.kit.credit_code.lower())
+        context = self.cart()
+        self.assertEqual(context["subtotal"], Decimal("480"))
+        self.assertEqual(context["credit"].amount, Decimal("80"))
+        self.assertEqual(context["total"], Decimal("400"))
+
+    def test_unknown_code_rejected(self):
+        self.apply("ESSAI-ZZZZ-ZZZZ")
+        self.assertIsNone(self.cart()["credit"])
+
+    def test_unpaid_kit_code_not_usable(self):
+        self.kit.status = self.kit.Status.PENDING
+        self.kit.save()
+        self.apply(self.kit.credit_code)
+        context = self.cart()
+        self.assertIn("confirmation du paiement", context["credit"].error)
+        self.assertEqual(context["total"], Decimal("480"))
+
+    @mock.patch("apps.orders.payments.stripe.checkout.Session.create", side_effect=fake_session)
+    @mock.patch("apps.orders.payments.stripe.Coupon.create", return_value=SimpleNamespace(id="coupon_1"))
+    def test_checkout_applies_stripe_coupon(self, coupon_create, session_create):
+        self.apply(self.kit.credit_code)
+        self.client.post(reverse("orders:checkout"))
+        order = Order.objects.get()
+        self.assertEqual((order.total, order.discount, order.trial_kit), (Decimal("400"), Decimal("80"), self.kit))
+        self.assertEqual(order.subtotal, Decimal("480"))
+        self.assertEqual(coupon_create.call_args.kwargs["amount_off"], 8000)
+        self.assertEqual(coupon_create.call_args.kwargs["max_redemptions"], 1)
+        self.assertEqual(session_create.call_args.kwargs["discounts"], [{"coupon": "coupon_1"}])
+
+    @mock.patch("apps.orders.payments.stripe.checkout.Session.create", side_effect=fake_session)
+    @mock.patch("apps.orders.payments.stripe.Coupon.create", return_value=SimpleNamespace(id="coupon_1"))
+    def test_code_is_single_use(self, *_):
+        Order.objects.create(
+            total=400, discount=80, trial_kit=self.kit, gold_spot_eur_per_oz=3000, status=Order.Status.PAID
+        )
+        self.apply(self.kit.credit_code)
+        self.assertIn("déjà été utilisé", self.cart()["credit"].error)
+        self.assertRedirects(self.client.post(reverse("orders:checkout")), reverse("orders:cart"))
+        self.assertEqual(Order.objects.count(), 1)
+
+    def test_code_reserved_by_another_pending_checkout(self):
+        Order.objects.create(total=400, discount=80, trial_kit=self.kit, gold_spot_eur_per_oz=3000)
+        self.apply(self.kit.credit_code)
+        self.assertIn("en cours d'utilisation", self.cart()["credit"].error)
+
+    @mock.patch("apps.orders.views.stripe.checkout.Session.expire")
+    @mock.patch("apps.orders.payments.stripe.checkout.Session.create", side_effect=fake_session)
+    @mock.patch("apps.orders.payments.stripe.Coupon.create", return_value=SimpleNamespace(id="coupon_1"))
+    def test_customer_can_retry_after_abandoning_checkout(self, _coupon, _create, expire):
+        self.apply(self.kit.credit_code)
+        self.client.post(reverse("orders:checkout"))
+        self.client.post(reverse("orders:checkout"))  # came back from Stripe and retried
+        expire.assert_called_once()
+        first, second = Order.objects.order_by("pk")
+        self.assertEqual(first.status, Order.Status.CANCELLED)
+        self.assertEqual((second.status, second.discount), (Order.Status.PENDING, Decimal("80")))
+
+    def test_paid_order_converts_kit(self):
+        order = Order.objects.create(
+            total=400, discount=80, trial_kit=self.kit, gold_spot_eur_per_oz=3000, stripe_session_id="cs_1"
+        )
+        signed_post(
+            self.client,
+            {
+                "type": "checkout.session.completed",
+                "data": {"object": {"id": "cs_1", "payment_status": "paid",
+                                    "metadata": {"kind": "order", "object_id": str(order.pk)}}},
+            },
+        )
+        self.kit.refresh_from_db()
+        self.assertEqual(self.kit.fulfillment, self.kit.Fulfillment.CONVERTED)
+        self.assertEqual(self.kit.redeemed_order, order)

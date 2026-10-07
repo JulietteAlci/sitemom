@@ -22,7 +22,7 @@ def trial_kit(request):
     if request.method == "POST" and form.is_valid():
         with transaction.atomic():
             kit = TrialKitOrder.objects.create(
-                deposit=Decimal(settings.TRIAL_KIT_DEPOSIT_CENTS) / 100,
+                price=Decimal(settings.TRIAL_KIT_PRICE_CENTS) / 100,
                 include_sizer=form.cleaned_data["include_sizer"],
                 message=form.cleaned_data["message"],
             )
@@ -34,8 +34,11 @@ def trial_kit(request):
                 line_items=[
                     payments.line_item(
                         name=f"Coffret d'essai — {kit.rings.count()} alliances",
-                        amount_cents=settings.TRIAL_KIT_DEPOSIT_CENTS,
-                        description="Caution remboursée au retour du coffret. Livraison et retour offerts.",
+                        amount_cents=settings.TRIAL_KIT_PRICE_CENTS,
+                        description=(
+                            "Montant intégralement déduit de votre commande d'alliances grâce à votre code unique. "
+                            "Non remboursé en l'absence de commande."
+                        ),
                     )
                 ],
                 success_url=request.build_absolute_uri(reverse("trialkit:success")),
@@ -63,7 +66,7 @@ def trial_kit(request):
             "selected": selected,
             "kit_min": settings.TRIAL_KIT_MIN,
             "kit_max": settings.TRIAL_KIT_MAX,
-            "deposit": Decimal(settings.TRIAL_KIT_DEPOSIT_CENTS) / 100,
+            "price": Decimal(settings.TRIAL_KIT_PRICE_CENTS) / 100,
         },
     )
 

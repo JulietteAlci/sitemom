@@ -22,8 +22,30 @@
         </tr>
       {% endfor %}
       </tbody>
-      <tfoot><tr><th colspan="3">Total TTC</th><th colspan="2">{{ total|euros }}</th></tr></tfoot>
+      <tfoot>
+        {% if credit and not credit.error %}
+          <tr><td colspan="3">Sous-total</td><td colspan="2">{{ subtotal|euros }}</td></tr>
+          <tr><td colspan="3">Coffret d'essai déduit ({{ credit.code }})</td><td colspan="2">−{{ credit.amount|euros }}</td></tr>
+        {% endif %}
+        <tr><th colspan="3">Total TTC</th><th colspan="2">{{ total|euros }}</th></tr>
+      </tfoot>
     </table>
+
+    {% if credit %}
+      {% if credit.error %}<p class="message message--error">{{ credit.code }} : {{ credit.error }}</p>{% endif %}
+      <form method="post" action="{% url 'orders:cart_trial_kit_code' %}">
+        {% csrf_token %}
+        <button class="link" type="submit" name="remove" value="1">Retirer le code {{ credit.code }}</button>
+      </form>
+    {% else %}
+      <form method="post" action="{% url 'orders:cart_trial_kit_code' %}" class="code-form">
+        {% csrf_token %}
+        <label>Vous avez essayé nos alliances ? Saisissez votre code de coffret d'essai
+          <input type="text" name="code" placeholder="ESSAI-XXXX-XXXX" autocomplete="off" required>
+        </label>
+        <button class="btn btn--small btn--ghost" type="submit">Appliquer</button>
+      </form>
+    {% endif %}
     <p class="small">
       Prix calculés au cours de l'or{% if gold_spot %} du {{ gold_spot.fetched_at|date:"d/m/Y à H:i" }} ({{ gold_spot.price_per_gram_eur|floatformat:2 }} €/g){% endif %}.
       Le montant est figé dès que vous passez au paiement, pour 30 minutes. Livraison offerte.

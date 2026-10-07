@@ -6,6 +6,7 @@ from decimal import Decimal
 from apps.catalog.models import Ring
 from apps.pricing.models import GoldPrice
 from apps.pricing.services import PriceBreakdown
+from apps.trialkit.models import TrialKitOrder
 
 MAX_QUANTITY = 4
 
@@ -28,12 +29,46 @@ class CartLine:
         return self.unit_price * self.quantity if self.breakdown else None
 
 
+@dataclass
+class TrialKitCredit:
+    """Result of applying a trial kit code to the cart."""
+
+    code: str
+    kit: TrialKitOrder | None = None
+    amount: Decimal = Decimal(0)
+    error: str | None = None
+
+
 class Cart:
     SESSION_KEY = "cart"
+    CODE_SESSION_KEY = "trial_kit_code"
 
     def __init__(self, request):
         self.session = request.session
         self._items = self.session.get(self.SESSION_KEY, [])
+
+    @property
+    def trial_kit_code(self) -> str:
+        return self.session.get(self.CODE_SESSION_KEY, "")
+
+    def set_trial_kit_code(self, code: str):
+        self.session[self.CODE_SESSION_KEY] = code
+
+    def clear_trial_kit_code(self):
+        self.session.pop(self.CODE_SESSION_KEY, None)
+
+    def trial_kit_credit(self, subtotal: Decimal | None) -> TrialKitCredit | None:
+        """Deduct the trial kit price from the cart if the stored code is valid."""
+        code = self.trial_kit_code
+        if not code:
+            return None
+        kit = TrialKitOrder.find_by_code(code)
+        if kit is None:
+            return TrialKitCredit(code=code, error="Ce code est inconnu.")
+        error = kit.credit_unavailable_reason()
+        if error:
+            return TrialKitCredit(code=code, kit=kit, error=error)
+        return TrialKitCredit(code=code, kit=kit, amount=min(kit.price, subtotal or Decimal(0)))
 
     def _save(self):
         self.session[self.SESSION_KEY] = self._items
@@ -63,6 +98,7 @@ class Cart:
     def clear(self):
         self._items = []
         self._save()
+        self.clear_trial_kit_code()
 
     def __len__(self):
         return sum(item["quantity"] for item in self._items)

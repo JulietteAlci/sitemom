@@ -157,3 +157,15 @@ tr.total th, tr.total td, tfoot th { font-weight: 500; }
 .footer__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 32px; }
 .footer a { display: block; text-decoration: none; color: var(--muted); margin-bottom: 6px; }
 .footer__title { text-transform: uppercase; letter-spacing: .14em; font-size: .72rem; }
+
+/* How it works */
+.journey { list-style: none; padding: 0; margin: 40px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; counter-reset: none; }
+.journey__step { background: var(--paper); border: 1px solid var(--line); padding: 28px 24px; }
+.journey__number { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--gold); border-radius: 50%; font-family: var(--serif); font-size: 1.4rem; color: var(--gold-dark); margin-bottom: 16px; }
+.journey__step p { margin: 0; color: var(--muted); font-size: .95rem; }
+.notice { border-left: 3px solid var(--gold); background: var(--paper); padding: 16px 24px; margin-top: 40px; max-width: 760px; }
+.notice__title { text-transform: uppercase; letter-spacing: .14em; font-size: .75rem; color: var(--gold-dark); margin: 0; }
+.journey__cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 32px; }
+.code-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-block: 20px; }
+.code-form input { max-width: 260px; text-transform: uppercase; }
+.credit-code { font-family: var(--serif); font-size: 2rem; letter-spacing: .08em; background: var(--paper); border: 1px dashed var(--gold); padding: 12px 20px; display: inline-block; user-select: all; }

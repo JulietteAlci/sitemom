@@ -25,7 +25,7 @@
   </div>
   <div>
     <h2 class="h3">Essayez {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} modèles chez vous</h2>
-    <p>Notre coffret d'essai vous permet de comparer les largeurs, profils et teintes avant de choisir.</p>
+    <p>Notre coffret d'essai à {{ TRIAL_KIT_PRICE }} €, déduit de votre commande, vous permet de comparer largeurs, profils et teintes. <a href="{% url 'core:how_it_works' %}">Comment ça fonctionne</a></p>
   </div>
   <div>
     <h2 class="h3">Façonnées à la main</h2>
@@ -50,7 +50,8 @@
     <div>
       <p class="eyebrow">Coffret d'essai</p>
       <h2>Le bon modèle se choisit au doigt.</h2>
-      <p>Sélectionnez de {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} alliances, recevez-les chez vous avec un baguier, gardez-les 5 jours. Livraison et retour offerts, caution remboursée.</p>
+      <p>Sélectionnez de {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} alliances et essayez-les chez vous avec un baguier. Les {{ TRIAL_KIT_PRICE }} € du coffret sont déduits de votre commande d'alliances grâce à un code unique.</p>
+      <p><a href="{% url 'core:how_it_works' %}">Comment ça fonctionne →</a></p>
     </div>
     <a class="btn" href="{% url 'trialkit:start' %}">Composer mon coffret</a>
   </div>

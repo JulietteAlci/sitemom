@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load seo %}
 {% block title %}Votre coffret d'essai est en préparation — {{ SITE_NAME }}{% endblock %}
 {% block robots %}<meta name="robots" content="noindex">{% endblock %}
 
@@ -8,7 +9,11 @@
   {% if kit %}
     <p>Référence <strong>{{ kit.reference }}</strong> — {{ kit.rings.count }} alliances{% if kit.include_sizer %} et un baguier{% endif %}.</p>
     <ul>{% for ring in kit.rings.all %}<li>{{ ring.name }}</li>{% endfor %}</ul>
-    <p>Vous recevrez un e-mail avec le numéro de suivi dès l'expédition.</p>
+    <h2>Votre code unique</h2>
+    <p class="credit-code">{{ kit.credit_code }}</p>
+    <p>Conservez-le précieusement : après avoir essayé puis renvoyé votre coffret, saisissez ce code dans votre panier au moment de commander vos alliances. Les {{ kit.price|euros }} du coffret seront déduits de votre commande.
+      {% if kit.status != "paid" %}Le code sera actif dès la confirmation de votre paiement.{% endif %}</p>
+    <p class="small">Le code est à usage unique. Sans commande d'alliances sur le site, le prix du coffret n'est pas remboursé.</p>
   {% else %}
     <p>Nous n'avons pas retrouvé ce coffret. Si vous avez été débité, contactez-nous.</p>
   {% endif %}

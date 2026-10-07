@@ -6,11 +6,16 @@
 
 - Prix = poids d'or fin × cours spot de l'or + façon de l'atelier + TVA 20 %.{% if gold_spot %}
 - Cours de l'or utilisé au {{ gold_spot.fetched_at|date:"d/m/Y H:i" }} : {{ gold_spot.price_per_gram_eur|floatformat:2 }} € par gramme d'or pur ({{ gold_spot.price_per_oz_eur|floatformat:2 }} € l'once troy).{% endif %}
-- Coffret d'essai : {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} modèles, baguier inclus, 5 jours d'essai, livraison et retour offerts, caution remboursée.
+- Coffret d'essai à {{ TRIAL_KIT_PRICE }} € : {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} modèles, baguier inclus. Le prix est déduit de la commande d'alliances grâce à un code unique ; il n'est pas remboursé sans commande.
 - Livraison : France, Belgique, Luxembourg, Suisse, Monaco.
+
+## Comment ça fonctionne
+{% for title, text in steps %}
+{{ forloop.counter }}. **{{ title }}** — {{ text }}{% endfor %}
 
 ## Pages principales
 
+- [Comment ça fonctionne]({{ SITE_URL }}{% url 'core:how_it_works' %})
 - [Alliances femme]({{ SITE_URL }}{% url 'catalog:women' %})
 - [Alliances homme]({{ SITE_URL }}{% url 'catalog:men' %})
 - [Coffret d'essai]({{ SITE_URL }}{% url 'trialkit:start' %})

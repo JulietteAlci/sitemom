@@ -47,3 +47,24 @@ class CoreTests(TestCase):
         data = self.client.get(reverse("pricing:gold_price_api")).json()
         self.assertTrue(data["available"])
         self.assertEqual(Decimal(data["eur_per_oz"]), GoldPrice.current().price_per_oz_eur)
+
+
+class HowItWorksTests(TestCase):
+    def test_page_describes_the_customer_journey(self):
+        response = self.client.get(reverse("core:how_it_works"))
+        self.assertEqual(len(response.context["steps"]), 5)
+        for text in (
+            "Commandez votre coffret d&#x27;essai à 80\u00a0€",
+            "Essayez les alliances chez vous",
+            "Renvoyez le coffret d&#x27;essai",
+            "Commandez vos alliances sur le site",
+            "Recevez vos alliances",
+            "ce montant n&#x27;est pas remboursé",
+            '"@type":"HowTo"',
+        ):
+            self.assertContains(response, text)
+
+    def test_linked_from_navigation_and_sitemap(self):
+        url = reverse("core:how_it_works")
+        self.assertContains(self.client.get(reverse("core:home")), f'href="{url}"')
+        self.assertContains(self.client.get("/sitemap.xml"), url)

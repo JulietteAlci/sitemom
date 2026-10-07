@@ -10,11 +10,22 @@ Site Django + Stripe d'alliances en or premium, au **prix indexé sur le cours s
 | Catalogues homme / femme (les modèles « mixte » apparaissent dans les deux), filtres couleur/titre/profil, tri par prix | `apps/catalog` — `/alliances/homme/`, `/alliances/femme/` |
 | Fiche produit avec détail du calcul du prix par taille | `/alliances/<slug>/` |
 | Blog SEO / GEO : chapô, encadré « À retenir », FAQ, JSON-LD (BlogPosting, FAQPage, BreadcrumbList), RSS | `apps/blog` — `/journal/` |
-| Coffret d'essai de 8 à 12 alliances, caution payée par Stripe | `apps/trialkit` — `/coffret-essai/` |
+| Page « Comment ça fonctionne » (parcours client en 5 étapes, JSON-LD HowTo + FAQ) | `apps/core` — `/comment-ca-fonctionne/` |
+| Coffret d'essai de 8 à 12 alliances, vendu 80 € par Stripe, avec code unique de déduction | `apps/trialkit` — `/coffret-essai/` |
 | Indexation des prix sur le cours de l'or | `apps/pricing` — `/cours-de-l-or/` |
 | Panier, paiement Stripe Checkout, webhook | `apps/orders` |
 | SEO technique : `sitemap.xml`, `robots.txt`, canonical, Open Graph, JSON-LD Product/Organization | `apps/core` |
 | GEO (moteurs IA) : `/llms.txt` généré dynamiquement (catalogue, prix, FAQ) | `apps/core` |
+
+## Parcours client et coffret d'essai
+
+1. Le client commande le coffret d'essai (80 €, `TRIAL_KIT_PRICE_CENTS`) : un code unique `ESSAI-XXXX-XXXX` lui est remis sur la page de confirmation.
+2. Il essaie les alliances chez lui.
+3. Il renvoie le coffret.
+4. Il commande ses alliances et saisit le code dans le panier : le prix du coffret est déduit (coupon Stripe à usage unique).
+5. Il reçoit ses alliances.
+
+Sans commande d'alliances, le prix du coffret n'est pas remboursé. Le code n'est actif qu'une fois le coffret payé, il ne sert qu'une fois, et il est réservé 30 minutes pendant un paiement en cours. Quand la commande est payée, le coffret passe automatiquement au statut « Converti en commande ».
 
 ## Calcul du prix
 
@@ -70,7 +81,7 @@ python manage.py test
 
 - Photos produits (champ `image`) et visuels éditoriaux ;
 - E-mails transactionnels (confirmation de commande, expédition du coffret) ;
-- Remboursement de la caution depuis l'admin (Stripe Refund) ;
-- Comptes clients, déduction de la caution du coffret lors de l'achat ;
+- Envoi du code de coffret par e-mail (aujourd'hui affiché sur la page de confirmation et dans l'admin) ;
+- Comptes clients ;
 - PostgreSQL, stockage S3 des médias et cache Redis en production ;
 - Textes légaux (CGV, mentions légales) à compléter.

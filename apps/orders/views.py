@@ -1,6 +1,8 @@
 import logging
+from decimal import Decimal
 
 import stripe
+from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -11,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from apps.catalog.models import Ring
 from apps.pricing.models import GoldPrice
-from apps.trialkit.models import TrialKitOrder
+from apps.trialkit.models import TrialKitOrder, normalize_code
 
 from . import payments
 from .cart import Cart
@@ -24,10 +26,51 @@ logger = logging.getLogger(__name__)
 CHECKOUT_MODELS = {"order": Order, "trial_kit": TrialKitOrder}
 
 
+PENDING_ORDER_SESSION_KEY = "pending_order_id"
+
+
 def cart_detail(request):
     cart = Cart(request)
     lines = cart.lines()
-    return render(request, "orders/cart.html", {"lines": lines, "total": Cart.total(lines)})
+    subtotal = Cart.total(lines)
+    credit = cart.trial_kit_credit(subtotal)
+    total = subtotal - credit.amount if subtotal is not None and credit else subtotal
+    return render(
+        request,
+        "orders/cart.html",
+        {"lines": lines, "subtotal": subtotal, "credit": credit, "total": total},
+    )
+
+
+@require_POST
+def cart_trial_kit_code(request):
+    cart = Cart(request)
+    if "remove" in request.POST:
+        cart.clear_trial_kit_code()
+        return redirect("orders:cart")
+    code = normalize_code(request.POST.get("code", ""))
+    if not code or TrialKitOrder.find_by_code(code) is None:
+        messages.error(request, "Ce code de coffret d'essai est inconnu.")
+        return redirect("orders:cart")
+    cart.set_trial_kit_code(code)
+    return redirect("orders:cart")
+
+
+def _abandon_previous_checkout(request):
+    """A customer starting a new checkout gives up the previous one: expire it so that
+    a trial kit code it reserved becomes usable again (and cannot be paid twice)."""
+    order = Order.objects.filter(
+        pk=request.session.pop(PENDING_ORDER_SESSION_KEY, None), status=Order.Status.PENDING
+    ).first()
+    if order is None:
+        return
+    if order.stripe_session_id:
+        try:
+            stripe.checkout.Session.expire(order.stripe_session_id, api_key=settings.STRIPE_SECRET_KEY)
+        except stripe.StripeError:
+            logger.warning("Could not expire Stripe session of order %s", order.reference, exc_info=True)
+            return  # keep it pending: the session may still be paid
+    order.mark_cancelled()
 
 
 @require_POST
@@ -67,8 +110,21 @@ def checkout(request):
     if not lines:
         return redirect("orders:cart")
 
+    _abandon_previous_checkout(request)
+    subtotal = Cart.total(lines)
+    credit = cart.trial_kit_credit(subtotal)
+    if credit and credit.error:
+        messages.error(request, credit.error)
+        return redirect("orders:cart")
+    discount = credit.amount if credit else Decimal(0)
+
     with transaction.atomic():
-        order = Order.objects.create(total=Cart.total(lines), gold_spot_eur_per_oz=spot.price_per_oz_eur)
+        order = Order.objects.create(
+            total=subtotal - discount,
+            discount=discount,
+            trial_kit=credit.kit if credit else None,
+            gold_spot_eur_per_oz=spot.price_per_oz_eur,
+        )
         OrderItem.objects.bulk_create(
             OrderItem(
                 order=order,
@@ -98,12 +154,15 @@ def checkout(request):
             line_items=items,
             success_url=request.build_absolute_uri(reverse("orders:success")),
             cancel_url=request.build_absolute_uri(reverse("orders:cart")),
+            discount_cents=int(discount * 100),
+            discount_name=f"Coffret d'essai {credit.kit.credit_code}" if credit else "",
         )
     except (payments.PaymentsNotConfigured, stripe.StripeError):
         logger.exception("Unable to create Stripe session for order %s", order.reference)
         order.mark_cancelled()
         messages.error(request, "Le paiement est momentanément indisponible. Merci de réessayer.")
         return redirect("orders:cart")
+    request.session[PENDING_ORDER_SESSION_KEY] = order.pk
     return redirect(session.url, permanent=False)
 
 
@@ -111,6 +170,7 @@ def checkout_success(request):
     order = Order.objects.filter(stripe_session_id=request.GET.get("session_id", "")).first()
     if order is not None:
         Cart(request).clear()
+        request.session.pop(PENDING_ORDER_SESSION_KEY, None)
     return render(request, "orders/success.html", {"order": order})
 
 

@@ -68,7 +68,12 @@ class StripeCheckoutMixin(models.Model):
 
 
 class Order(StripeCheckoutMixin):
-    total = models.DecimalField("total TTC (€)", max_digits=10, decimal_places=2)
+    total = models.DecimalField("total payé TTC (€)", max_digits=10, decimal_places=2)
+    discount = models.DecimalField("déduction coffret (€)", max_digits=8, decimal_places=2, default=0)
+    trial_kit = models.ForeignKey(
+        "trialkit.TrialKitOrder", on_delete=models.PROTECT, null=True, blank=True, related_name="orders",
+        verbose_name="coffret d'essai déduit",
+    )
     gold_spot_eur_per_oz = models.DecimalField(
         "cours de l'or appliqué (€/oz)", max_digits=12, decimal_places=4,
         help_text="Cours figé au moment de la commande.",
@@ -76,6 +81,18 @@ class Order(StripeCheckoutMixin):
 
     class Meta(StripeCheckoutMixin.Meta):
         verbose_name = "commande"
+
+    @property
+    def subtotal(self):
+        return self.total + self.discount
+
+    def mark_paid(self, session: dict) -> bool:
+        changed = super().mark_paid(session)
+        if changed and self.trial_kit_id:
+            kit = self.trial_kit
+            kit.fulfillment = kit.Fulfillment.CONVERTED
+            kit.save(update_fields=["fulfillment"])
+        return changed
 
 
 class OrderItem(models.Model):

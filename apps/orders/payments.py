@@ -32,11 +32,27 @@ def line_item(name: str, amount_cents: int, quantity: int = 1, description: str 
     }
 
 
-def create_checkout_session(*, kind: str, obj, line_items: list[dict], success_url: str, cancel_url: str):
+def create_checkout_session(
+    *, kind: str, obj, line_items: list[dict], success_url: str, cancel_url: str, discount_cents: int = 0,
+    discount_name: str = "",
+):
     """Create a Stripe Checkout Session for `obj` (Order or TrialKitOrder) and store its id."""
     if not settings.STRIPE_SECRET_KEY:
         raise PaymentsNotConfigured("STRIPE_SECRET_KEY is not set")
     metadata = {"kind": kind, "object_id": str(obj.pk), "reference": obj.reference}
+    extra = {}
+    if discount_cents:
+        # One-shot coupon: Stripe line items cannot carry negative amounts.
+        coupon = stripe.Coupon.create(
+            api_key=settings.STRIPE_SECRET_KEY,
+            amount_off=discount_cents,
+            currency=settings.CURRENCY,
+            duration="once",
+            max_redemptions=1,
+            name=discount_name or "Déduction",
+            metadata=metadata,
+        )
+        extra["discounts"] = [{"coupon": coupon.id}]
     session = stripe.checkout.Session.create(
         api_key=settings.STRIPE_SECRET_KEY,
         mode="payment",
@@ -50,6 +66,7 @@ def create_checkout_session(*, kind: str, obj, line_items: list[dict], success_u
         expires_at=int((timezone.now() + CHECKOUT_LIFETIME).timestamp()),
         success_url=success_url + "?session_id={CHECKOUT_SESSION_ID}",
         cancel_url=cancel_url,
+        **extra,
     )
     obj.stripe_session_id = session.id
     obj.save(update_fields=["stripe_session_id"])

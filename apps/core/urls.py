@@ -7,6 +7,7 @@ app_name = "core"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("comment-ca-fonctionne/", views.how_it_works, name="how_it_works"),
     path("robots.txt", views.robots_txt, name="robots"),
     path("llms.txt", views.llms_txt, name="llms"),
     path("mentions-legales/", TemplateView.as_view(template_name="core/legal.html"), name="legal"),

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load seo %}
+
+{% block title %}Comment ça fonctionne : essayez, puis commandez vos alliances — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Commandez un coffret d'essai à {{ kit_price }} €, essayez {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} alliances chez vous, renvoyez-le, puis commandez : les {{ kit_price }} € sont déduits grâce à votre code unique.{% endblock %}
+{% block og_title %}Comment ça fonctionne — {{ SITE_NAME }}{% endblock %}
+
+{% block structured_data %}
+{% breadcrumb_jsonld "Accueil" "/" "Comment ça fonctionne" request.path %}
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"HowTo","name":"Choisir et commander ses alliances avec le coffret d'essai","inLanguage":"fr-FR","estimatedCost":{"@type":"MonetaryAmount","currency":"EUR","value":"{{ kit_price }}"},"step":[{% for title, text in steps %}{"@type":"HowToStep","position":{{ forloop.counter }},"name":"{{ title|escapejs }}","text":"{{ text|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{% for question, answer in faqs %}{"@type":"Question","name":"{{ question|escapejs }}","acceptedAnswer":{"@type":"Answer","text":"{{ answer|escapejs }}"}}{% if not forloop.last %},{% endif %}{% endfor %}]}</script>
+{% endblock %}
+
+{% block content %}
+<section class="section container">
+  <nav class="breadcrumb" aria-label="Fil d'Ariane"><a href="{% url 'core:home' %}">Accueil</a> / Comment ça fonctionne</nav>
+  <p class="eyebrow">Votre parcours</p>
+  <h1>Comment ça fonctionne</h1>
+  <p class="lead">Une alliance se choisit au doigt. Essayez nos modèles chez vous, puis commandez en ligne : le prix du coffret vous est déduit.</p>
+
+  <ol class="journey">
+    {% for title, text in steps %}
+      <li class="journey__step">
+        <span class="journey__number" aria-hidden="true">{{ forloop.counter }}</span>
+        <h2 class="h3">{{ title }}</h2>
+        <p>{{ text }}</p>
+      </li>
+    {% endfor %}
+  </ol>
+
+  <aside class="notice" role="note">
+    <p class="notice__title">Bon à savoir</p>
+    <p>Le prix du coffret d'essai ({{ kit_price }} €) est <strong>intégralement déduit</strong> de votre commande d'alliances grâce à votre code unique.
+      <strong>Si vous ne commandez pas d'alliances sur le site, ce montant n'est pas remboursé.</strong></p>
+  </aside>
+
+  <p class="journey__cta">
+    <a class="btn" href="{% url 'trialkit:start' %}">Commander mon coffret d'essai — {{ kit_price }} €</a>
+    <a class="btn btn--ghost" href="{% url 'catalog:ring_list' %}">Voir les alliances</a>
+  </p>
+</section>
+
+<section class="section container narrow">
+  <h2>Questions fréquentes</h2>
+  {% for question, answer in faqs %}
+    <details class="faq"><summary>{{ question }}</summary><p>{{ answer }}</p></details>
+  {% endfor %}
+</section>
+{% endblock %}
