@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load seo %}
+{% block title %}Cours de l'or du jour et calcul du prix de nos alliances — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Cours de l'or en euros (gramme et once) et méthode de calcul du prix de nos alliances : poids d'or fin × cours spot + façon + TVA.{% endblock %}
+
+{% block content %}
+<section class="section container narrow prose">
+  <h1>Le cours de l'or et nos prix</h1>
+  {% if gold_spot %}
+    <div class="spot">
+      <p><span class="spot__value">{{ gold_spot.price_per_gram_eur|floatformat:2 }} €</span> le gramme d'or pur</p>
+      <p>{{ gold_spot.price_per_oz_eur|floatformat:2 }} € l'once troy (31,10 g) · relevé le {{ gold_spot.fetched_at|date:"d/m/Y à H:i" }}</p>
+      {% if not gold_spot.is_fresh %}<p class="message message--warning">Ce cours n'a pas été actualisé récemment : les paiements sont suspendus jusqu'à la prochaine cotation.</p>{% endif %}
+    </div>
+  {% endif %}
+
+  <h2>Comment calculons-nous le prix d'une alliance ?</h2>
+  <p>Une alliance en or 18 carats contient 75 % d'or pur. Son prix est calculé à partir de :</p>
+  <ol>
+    <li><strong>Le poids d'or fin</strong> : poids de l'alliance dans votre taille × titre (750 ‰ pour l'or 18 carats).</li>
+    <li><strong>Le cours spot de l'or</strong>, actualisé plusieurs fois par jour.</li>
+    <li><strong>La façon de l'atelier</strong> : fonte, mise en forme, polissage, gravure, poinçonnage.</li>
+    <li><strong>La TVA</strong> de 20 %.</li>
+  </ol>
+  <p>Le prix affiché est donc susceptible d'évoluer chaque jour avec le marché. Une fois le paiement engagé, il est garanti pendant 30 minutes.</p>
+
+  {% if daily_history %}
+  <h2>Historique sur 30 jours</h2>
+  <table>
+    <thead><tr><th>Date</th><th>€ / gramme</th><th>€ / once</th></tr></thead>
+    <tbody>
+      {% for day, quote in daily_history %}
+        <tr><td>{{ day|date:"d/m/Y" }}</td><td>{{ quote.price_per_gram_eur|floatformat:2 }}</td><td>{{ quote.price_per_oz_eur|floatformat:2 }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

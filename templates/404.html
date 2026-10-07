@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Page introuvable — {{ SITE_NAME }}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<section class="section container narrow">
+  <h1>Cette page n'existe pas.</h1>
+  <p>Retrouvez nos <a href="{% url 'catalog:women' %}">alliances femme</a>, nos <a href="{% url 'catalog:men' %}">alliances homme</a> ou revenez à l'<a href="{% url 'core:home' %}">accueil</a>.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load seo %}
+
+{% block title %}{{ post.seo_title }} — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}{{ post.seo_description }}{% endblock %}
+{% block og_type %}article{% endblock %}
+{% block og_title %}{{ post.seo_title }}{% endblock %}
+{% block og_description %}{{ post.seo_description }}{% endblock %}
+{% block og_image %}{% if post.cover %}<meta property="og:image" content="{{ SITE_URL }}{{ post.cover.url }}">{% endif %}{% endblock %}
+{% block canonical %}{{ SITE_URL }}{{ post.get_absolute_url }}{% endblock %}
+{% block structured_data %}
+  {% article_jsonld post %}
+  {% faq_jsonld faqs %}
+  {% url 'blog:post_list' as journal_url %}{% breadcrumb_jsonld "Accueil" "/" "Journal" journal_url post.title post.get_absolute_url %}
+{% endblock %}
+
+{% block content %}
+<article class="section container narrow">
+  <nav class="breadcrumb" aria-label="Fil d'Ariane"><a href="{% url 'core:home' %}">Accueil</a> / <a href="{% url 'blog:post_list' %}">Journal</a>{% if post.category %} / <a href="{{ post.category.get_absolute_url }}">{{ post.category }}</a>{% endif %}</nav>
+  <header>
+    <h1>{{ post.title }}</h1>
+    <p class="small">Par {{ post.author_name }} · <time datetime="{{ post.published_at|date:'c' }}">{{ post.published_at|date:"j F Y" }}</time>{% if post.updated_at.date > post.published_at.date %} · mis à jour le <time datetime="{{ post.updated_at|date:'c' }}">{{ post.updated_at|date:"j F Y" }}</time>{% endif %}</p>
+    <p class="lead">{{ post.excerpt }}</p>
+  </header>
+
+  {% if post.takeaways %}
+  <aside class="takeaways">
+    <p class="takeaways__title">À retenir</p>
+    <ul>{% for item in post.takeaways %}<li>{{ item }}</li>{% endfor %}</ul>
+  </aside>
+  {% endif %}
+
+  {% if post.cover %}<img class="cover" src="{{ post.cover.url }}" alt="">{% endif %}
+
+  <div class="prose">{{ post.body|safe }}</div>
+
+  {% if faqs %}
+  <section>
+    <h2>Questions fréquentes</h2>
+    {% for faq in faqs %}
+      <details class="faq"><summary>{{ faq.question }}</summary><p>{{ faq.answer|linebreaksbr }}</p></details>
+    {% endfor %}
+  </section>
+  {% endif %}
+</article>
+
+{% if related_rings %}
+<section class="section container">
+  <h2>Les alliances de cet article</h2>
+  <div class="grid">{% for ring, price in related_rings %}{% include "includes/ring_card.html" %}{% endfor %}</div>
+</section>
+{% endif %}
+
+{% if more_posts %}
+<section class="section container">
+  <h2>À lire aussi</h2>
+  <div class="grid grid--3">
+    {% for p in more_posts %}
+      <article class="post-card"><a href="{{ p.get_absolute_url }}"><h3>{{ p.title }}</h3><p>{{ p.excerpt|truncatewords:24 }}</p></a></article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

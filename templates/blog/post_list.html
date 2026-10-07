@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load seo %}
+
+{% block title %}{% if category %}{{ category.name }} — {% endif %}Journal — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}{% if category.description %}{{ category.description }}{% else %}Guides et conseils pour choisir son alliance en or : largeurs, profils, carats, tour de doigt, cours de l'or.{% endif %}{% endblock %}
+{% block robots %}{% if page_obj.number > 1 %}<meta name="robots" content="noindex, follow">{% endif %}{% endblock %}
+
+{% block content %}
+<section class="section container">
+  <h1>{% if category %}{{ category.name }}{% else %}Le journal{% endif %}</h1>
+  <p class="lead">Savoir-faire, guides d'achat et conseils pour choisir l'alliance d'une vie.</p>
+
+  {% if categories %}
+  <nav class="chips" aria-label="Catégories">
+    <a href="{% url 'blog:post_list' %}"{% if not category %} aria-current="page"{% endif %}>Tous</a>
+    {% for c in categories %}<a href="{{ c.get_absolute_url }}"{% if c == category %} aria-current="page"{% endif %}>{{ c.name }}</a>{% endfor %}
+  </nav>
+  {% endif %}
+
+  <div class="grid grid--3">
+    {% for post in page_obj %}
+      <article class="post-card">
+        <a href="{{ post.get_absolute_url }}">
+          {% if post.cover %}<img src="{{ post.cover.url }}" alt="" loading="lazy">{% endif %}
+          {% if post.category %}<p class="eyebrow">{{ post.category }}</p>{% endif %}
+          <h2 class="h3">{{ post.title }}</h2>
+          <p>{{ post.excerpt|truncatewords:30 }}</p>
+          <p class="small"><time datetime="{{ post.published_at|date:'c' }}">{{ post.published_at|date:"j F Y" }}</time></p>
+        </a>
+      </article>
+    {% empty %}
+      <p>Les premiers articles arrivent bientôt.</p>
+    {% endfor %}
+  </div>
+
+  {% if page_obj.has_other_pages %}
+    <nav class="pagination">
+      {% if page_obj.has_previous %}<a rel="prev" href="?page={{ page_obj.previous_page_number }}">← Précédent</a>{% endif %}
+      <span>Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}<a rel="next" href="?page={{ page_obj.next_page_number }}">Suivant →</a>{% endif %}
+    </nav>
+  {% endif %}
+</section>
+{% endblock %}

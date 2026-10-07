@@ -1,0 +1,8 @@
+{% load seo %}<article class="card">
+  <a href="{{ ring.get_absolute_url }}" class="card__link">
+    <div class="card__visual">{% include "includes/ring_visual.html" %}</div>
+    <h3 class="card__title">{{ ring.name }}</h3>
+    <p class="card__meta">{{ ring.get_color_display }} {{ ring.carats }} ct · {{ ring.width_mm }} mm</p>
+    <p class="card__price">{% if price %}À partir de {{ price.price_ttc|euros }}{% else %}Prix sur demande{% endif %}</p>
+  </a>
+</article>

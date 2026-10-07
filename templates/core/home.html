@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load seo %}
+
+{% block structured_data %}
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"{{ SITE_NAME|escapejs }}","url":"{{ SITE_URL|escapejs }}"}</script>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero__inner">
+    <p class="eyebrow">Or 18 carats · Fabriqué en France</p>
+    <h1>L'alliance en or, au juste prix de l'or.</h1>
+    <p class="lead">Chaque alliance est vendue au poids réel de son or, valorisé au cours du jour. Aucune marge cachée, une façon d'atelier transparente.</p>
+    <div class="hero__actions">
+      <a class="btn" href="{% url 'catalog:women' %}">Alliances femme</a>
+      <a class="btn btn--ghost" href="{% url 'catalog:men' %}">Alliances homme</a>
+    </div>
+  </div>
+</section>
+
+<section class="section container pillars">
+  <div>
+    <h2 class="h3">Indexé sur le cours de l'or</h2>
+    <p>Nos prix suivent le cours spot de l'or{% if gold_spot %} — aujourd'hui {{ gold_spot.price_per_gram_eur|floatformat:2 }} € le gramme d'or pur{% endif %}.</p>
+  </div>
+  <div>
+    <h2 class="h3">Essayez {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} modèles chez vous</h2>
+    <p>Notre coffret d'essai vous permet de comparer les largeurs, profils et teintes avant de choisir.</p>
+  </div>
+  <div>
+    <h2 class="h3">Façonnées à la main</h2>
+    <p>Or recyclé certifié, poinçon de maître, gravure intérieure offerte.</p>
+  </div>
+</section>
+
+{% if featured %}
+<section class="section container">
+  <div class="section__head">
+    <h2>Nos alliances signatures</h2>
+    <a href="{% url 'catalog:ring_list' %}">Voir toute la collection →</a>
+  </div>
+  <div class="grid">
+    {% for ring, price in featured %}{% include "includes/ring_card.html" %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="section band">
+  <div class="container band__inner">
+    <div>
+      <p class="eyebrow">Coffret d'essai</p>
+      <h2>Le bon modèle se choisit au doigt.</h2>
+      <p>Sélectionnez de {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} alliances, recevez-les chez vous avec un baguier, gardez-les 5 jours. Livraison et retour offerts, caution remboursée.</p>
+    </div>
+    <a class="btn" href="{% url 'trialkit:start' %}">Composer mon coffret</a>
+  </div>
+</section>
+
+{% if latest_posts %}
+<section class="section container">
+  <div class="section__head">
+    <h2>Le journal</h2>
+    <a href="{% url 'blog:post_list' %}">Tous les articles →</a>
+  </div>
+  <div class="grid grid--3">
+    {% for post in latest_posts %}
+      <article class="post-card">
+        <a href="{{ post.get_absolute_url }}">
+          {% if post.category %}<p class="eyebrow">{{ post.category }}</p>{% endif %}
+          <h3>{{ post.title }}</h3>
+          <p>{{ post.excerpt|truncatewords:28 }}</p>
+        </a>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="section container narrow">
+  <h2>Questions fréquentes</h2>
+  {% for question, answer in faqs %}
+    <details class="faq">
+      <summary>{{ question }}</summary>
+      <p>{{ answer }}</p>
+    </details>
+  {% endfor %}
+</section>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{% for question, answer in faqs %}{"@type":"Question","name":"{{ question|escapejs }}","acceptedAnswer":{"@type":"Answer","text":"{{ answer|escapejs }}"}}{% if not forloop.last %},{% endif %}{% endfor %}]}</script>
+{% endblock %}

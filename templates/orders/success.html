@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load seo %}
+{% block title %}Merci pour votre commande — {{ SITE_NAME }}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<section class="section container narrow">
+  <h1>Merci !</h1>
+  {% if order %}
+    <p>Votre commande <strong>{{ order.reference }}</strong> d'un montant de {{ order.total|euros }} est enregistrée.
+      {% if order.status == "paid" %}Le paiement est confirmé.{% else %}La confirmation du paiement est en cours ; vous la recevrez par e-mail.{% endif %}</p>
+    <p>Votre alliance est maintenant façonnée à la main dans notre atelier. Comptez 3 à 4 semaines de fabrication.</p>
+  {% else %}
+    <p>Nous n'avons pas retrouvé cette commande. Si vous avez été débité, contactez-nous.</p>
+  {% endif %}
+  <p><a href="{% url 'core:home' %}">Retour à l'accueil</a></p>
+</section>
+{% endblock %}

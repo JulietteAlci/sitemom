@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load seo %}
+{% block title %}Votre panier — {{ SITE_NAME }}{% endblock %}
+{% block robots %}<meta name="robots" content="noindex">{% endblock %}
+
+{% block content %}
+<section class="section container narrow">
+  <h1>Votre panier</h1>
+  {% if lines %}
+    <table class="cart">
+      <thead><tr><th>Alliance</th><th>Taille</th><th>Qté</th><th>Prix</th><th></th></tr></thead>
+      <tbody>
+      {% for line in lines %}
+        <tr>
+          <td><a href="{{ line.ring.get_absolute_url }}">{{ line.ring.name }}</a>{% if line.engraving %}<br><span class="small">Gravure : « {{ line.engraving }} »</span>{% endif %}</td>
+          <td>{{ line.size }}</td>
+          <td>{{ line.quantity }}</td>
+          <td>{{ line.total|euros }}</td>
+          <td>
+            <form method="post" action="{% url 'orders:cart_remove' line.id %}">{% csrf_token %}<button class="link" type="submit">Retirer</button></form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><th colspan="3">Total TTC</th><th colspan="2">{{ total|euros }}</th></tr></tfoot>
+    </table>
+    <p class="small">
+      Prix calculés au cours de l'or{% if gold_spot %} du {{ gold_spot.fetched_at|date:"d/m/Y à H:i" }} ({{ gold_spot.price_per_gram_eur|floatformat:2 }} €/g){% endif %}.
+      Le montant est figé dès que vous passez au paiement, pour 30 minutes. Livraison offerte.
+    </p>
+    <form method="post" action="{% url 'orders:checkout' %}">
+      {% csrf_token %}
+      <button class="btn btn--block" type="submit"{% if not total or not gold_spot.is_fresh %} disabled{% endif %}>Payer en toute sécurité</button>
+    </form>
+  {% else %}
+    <p>Votre panier est vide.</p>
+    <p><a class="btn" href="{% url 'catalog:women' %}">Alliances femme</a> <a class="btn btn--ghost" href="{% url 'catalog:men' %}">Alliances homme</a></p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load seo %}
+{% block title %}Coffret d'essai : essayez {{ kit_min }} à {{ kit_max }} alliances chez vous — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Recevez de {{ kit_min }} à {{ kit_max }} alliances en essai à domicile avec un baguier. Livraison et retour offerts, caution remboursée.{% endblock %}
+
+{% block content %}
+<section class="section container">
+  <p class="eyebrow">Coffret d'essai</p>
+  <h1>Essayez vos alliances chez vous</h1>
+  <ol class="steps">
+    <li><strong>Choisissez</strong> de {{ kit_min }} à {{ kit_max }} modèles ci-dessous.</li>
+    <li><strong>Recevez</strong> votre coffret en 48 h, avec un baguier pour mesurer votre tour de doigt.</li>
+    <li><strong>Essayez</strong> pendant 5 jours puis renvoyez-le avec l'étiquette prépayée : votre caution de {{ deposit|euros }} est remboursée.</li>
+  </ol>
+
+  <form method="post" class="trial-form" data-min="{{ kit_min }}" data-max="{{ kit_max }}">
+    {% csrf_token %}
+    {% if form.rings.errors %}<div class="message message--error">{{ form.rings.errors }}</div>{% endif %}
+
+    {% for label, rings in groups %}
+      <h2>{{ label }}</h2>
+      <div class="grid trial-grid">
+        {% for ring in rings %}
+          <label class="trial-option">
+            <input type="checkbox" name="rings" value="{{ ring.pk }}"{% if ring.pk|stringformat:"s" in selected %} checked{% endif %}>
+            <span class="trial-option__visual">{% include "includes/ring_visual.html" %}</span>
+            <span class="trial-option__name">{{ ring.name }}</span>
+            <span class="small">{{ ring.get_color_display }} · {{ ring.width_mm }} mm</span>
+          </label>
+        {% endfor %}
+      </div>
+    {% endfor %}
+
+    <div class="stack trial-options">
+      <label class="checkbox">{{ form.include_sizer }} {{ form.include_sizer.label }}</label>
+      <label>{{ form.message.label }}{{ form.message }}</label>
+    </div>
+
+    <div class="trial-summary">
+      <p><span data-counter>{{ selected|length }}</span> / {{ kit_max }} alliances sélectionnées <span class="small">(minimum {{ kit_min }})</span></p>
+      <button class="btn" type="submit" data-submit>Commander mon coffret — caution {{ deposit|euros }}</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

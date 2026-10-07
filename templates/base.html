@@ -1,0 +1,81 @@
+{% load static seo %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ SITE_NAME }} — Alliances en or au cours du jour{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Alliances en or 18 carats fabriquées en France, au prix indexé sur le cours de l'or. Essayez jusqu'à 12 modèles chez vous.{% endblock %}">
+  <link rel="canonical" href="{% block canonical %}{{ canonical_url }}{% endblock %}">
+  {% block robots %}{% endblock %}
+  <meta property="og:site_name" content="{{ SITE_NAME }}">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+  <meta property="og:title" content="{% block og_title %}{{ SITE_NAME }}{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Alliances en or au cours du jour, fabriquées en France.{% endblock %}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  {% block og_image %}{% endblock %}
+  <link rel="alternate" type="application/rss+xml" title="{{ SITE_NAME }} — Journal" href="{% url 'blog:feed' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  {% organization_jsonld %}
+  {% block structured_data %}{% endblock %}
+</head>
+<body>
+  <div class="ticker" role="status">
+    {% if gold_spot %}
+      Cours de l'or : <strong>{{ gold_spot.price_per_gram_eur|floatformat:2 }} €/g</strong>
+      <span class="ticker__sep">·</span> {{ gold_spot.price_per_oz_eur|floatformat:0 }} €/once
+      <span class="ticker__sep">·</span> mis à jour {{ gold_spot.fetched_at|date:"d/m à H:i" }}
+      <a href="{% url 'pricing:gold_price' %}">Comprendre nos prix</a>
+    {% else %}
+      Nos prix sont indexés sur le cours de l'or. <a href="{% url 'pricing:gold_price' %}">En savoir plus</a>
+    {% endif %}
+  </div>
+
+  <header class="header">
+    <div class="container header__inner">
+      <a class="logo" href="{% url 'core:home' %}">{{ SITE_NAME }}</a>
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="{% url 'catalog:women' %}">Femme</a>
+        <a href="{% url 'catalog:men' %}">Homme</a>
+        <a href="{% url 'trialkit:start' %}">Coffret d'essai</a>
+        <a href="{% url 'blog:post_list' %}">Journal</a>
+      </nav>
+      <a class="cart-link" href="{% url 'orders:cart' %}">Panier{% if cart_count %} <span class="badge">{{ cart_count }}</span>{% endif %}</a>
+    </div>
+  </header>
+
+  {% if messages %}
+    <div class="container messages">
+      {% for message in messages %}<p class="message message--{{ message.tags }}">{{ message }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <footer class="footer">
+    <div class="container footer__grid">
+      <div>
+        <p class="logo">{{ SITE_NAME }}</p>
+        <p>Alliances en or 18 carats recyclé, façonnées à la main en France et vendues au cours du jour.</p>
+      </div>
+      <div>
+        <p class="footer__title">Alliances</p>
+        <a href="{% url 'catalog:women' %}">Alliances femme</a>
+        <a href="{% url 'catalog:men' %}">Alliances homme</a>
+        <a href="{% url 'trialkit:start' %}">Coffret d'essai</a>
+      </div>
+      <div>
+        <p class="footer__title">Maison</p>
+        <a href="{% url 'pricing:gold_price' %}">Cours de l'or &amp; prix</a>
+        <a href="{% url 'blog:post_list' %}">Journal</a>
+        <a href="{% url 'core:terms' %}">CGV</a>
+        <a href="{% url 'core:legal' %}">Mentions légales</a>
+      </div>
+    </div>
+  </footer>
+  <script src="{% static 'js/site.js' %}" defer></script>
+</body>
+</html>

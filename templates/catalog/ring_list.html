@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load seo %}
+
+{% block title %}{{ page.title }} — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}{{ page.meta_description }}{% endblock %}
+{% block og_title %}{{ page.title }}{% endblock %}
+{% block og_description %}{{ page.meta_description }}{% endblock %}
+{% block canonical %}{{ canonical_url }}{% endblock %}
+{% block robots %}{% if request.GET %}<meta name="robots" content="noindex, follow">{% endif %}{% endblock %}
+{% block structured_data %}{% breadcrumb_jsonld "Accueil" "/" page.title request.path %}{% endblock %}
+
+{% block content %}
+<section class="section container">
+  <nav class="breadcrumb" aria-label="Fil d'Ariane"><a href="{% url 'core:home' %}">Accueil</a> / {{ page.title }}</nav>
+  <h1>{{ page.title }}</h1>
+  {% if page.intro %}<p class="lead">{{ page.intro }}</p>{% endif %}
+
+  <form class="filters" method="get">
+    {% for group in filter_groups %}
+      <label>{{ group.label }}
+        <select name="{{ group.param }}" onchange="this.form.submit()">
+          <option value="">Tous</option>
+          {% for value, label in group.choices %}
+            <option value="{{ value }}"{% if group.active == value|stringformat:"s" %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endfor %}
+    <label>Trier
+      <select name="tri" onchange="this.form.submit()">
+        {% for value, label in sorts %}<option value="{{ value }}"{% if value == current_sort %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </label>
+    <noscript><button class="btn btn--small" type="submit">Filtrer</button></noscript>
+  </form>
+
+  {% if items %}
+    <div class="grid">
+      {% for ring, price in items %}{% include "includes/ring_card.html" %}{% endfor %}
+    </div>
+  {% else %}
+    <p>Aucune alliance ne correspond à ces critères.</p>
+  {% endif %}
+
+  <aside class="band band--inline">
+    <p>Hésitation entre plusieurs modèles ? <a href="{% url 'trialkit:start' %}">Essayez-en {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} chez vous</a>.</p>
+  </aside>
+</section>
+{% endblock %}

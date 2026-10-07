@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load seo %}
+
+{% block title %}{{ ring.seo_title }} — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}{{ ring.seo_description }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ ring.seo_title }}{% endblock %}
+{% block og_description %}{{ ring.seo_description }}{% endblock %}
+{% block og_image %}{% if ring.image %}<meta property="og:image" content="{{ SITE_URL }}{{ ring.image.url }}">{% endif %}{% endblock %}
+{% block canonical %}{{ SITE_URL }}{{ ring.get_absolute_url }}{% endblock %}
+{% block structured_data %}
+  {% product_jsonld ring breakdown %}
+  {% if ring.gender == "homme" %}{% url 'catalog:men' as list_url %}{% breadcrumb_jsonld "Accueil" "/" "Alliances homme" list_url ring.name ring.get_absolute_url %}{% else %}{% url 'catalog:women' as list_url %}{% breadcrumb_jsonld "Accueil" "/" "Alliances femme" list_url ring.name ring.get_absolute_url %}{% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="section container product">
+  <div class="product__visual">{% include "includes/ring_visual.html" %}</div>
+
+  <div class="product__info">
+    <nav class="breadcrumb" aria-label="Fil d'Ariane">
+      <a href="{% url 'core:home' %}">Accueil</a> /
+      {% if ring.gender == "homme" %}<a href="{% url 'catalog:men' %}">Alliances homme</a>{% else %}<a href="{% url 'catalog:women' %}">Alliances femme</a>{% endif %}
+    </nav>
+    <h1>{{ ring.name }}</h1>
+    <p class="lead">{{ ring.short_description }}</p>
+
+    {% if breakdown %}
+      <p class="product__price">{{ breakdown.price_ttc|euros }} <small>TTC · taille {{ size }}</small></p>
+    {% else %}
+      <p class="product__price">Prix bientôt disponible</p>
+    {% endif %}
+
+    <form method="post" action="{% url 'orders:cart_add' ring.slug %}" class="stack">
+      {% csrf_token %}
+      {{ form.as_div }}
+      <button class="btn btn--block" type="submit"{% if not breakdown or not gold_spot.is_fresh %} disabled{% endif %}>Ajouter au panier</button>
+    </form>
+    {% if ring.available_for_trial %}
+      <p><a href="{% url 'trialkit:start' %}?alliance={{ ring.pk }}">Ajouter ce modèle à mon coffret d'essai →</a></p>
+    {% endif %}
+
+    {% if breakdown %}
+    <details class="breakdown" open>
+      <summary>Comment ce prix est-il calculé ?</summary>
+      <table>
+        <tr><th>Poids de l'alliance (taille {{ size }})</th><td>{{ breakdown.weight_g }} g</td></tr>
+        <tr><th>Or fin contenu ({{ ring.get_purity_display }})</th><td>{{ breakdown.fine_gold_g }} g</td></tr>
+        <tr><th>Cours de l'or ({{ breakdown.spot.fetched_at|date:"d/m H:i" }})</th><td>{{ breakdown.spot.price_per_gram_eur|floatformat:2 }} €/g</td></tr>
+        <tr><th>Valeur de l'or</th><td>{{ breakdown.gold_value|euros }}</td></tr>
+        <tr><th>Prix HT (façon atelier incluse)</th><td>{{ breakdown.price_ht|euros }}</td></tr>
+        <tr><th>TVA</th><td>{{ breakdown.vat|euros }}</td></tr>
+        <tr class="total"><th>Prix TTC</th><td>{{ breakdown.price_ttc|euros }}</td></tr>
+      </table>
+      <p class="small">Le prix suit le cours de l'or ; il est garanti 30 minutes une fois le paiement engagé.</p>
+    </details>
+    {% endif %}
+
+    <h2 class="h3">Caractéristiques</h2>
+    <dl class="specs">
+      <dt>Métal</dt><dd>{{ ring.get_color_display }} {{ ring.get_purity_display }}</dd>
+      <dt>Largeur</dt><dd>{{ ring.width_mm }} mm</dd>
+      <dt>Épaisseur</dt><dd>{{ ring.thickness_mm }} mm</dd>
+      <dt>Profil</dt><dd>{{ ring.get_profile_display }}</dd>
+      <dt>Finition</dt><dd>{{ ring.get_finish_display }}</dd>
+      {% if ring.stones %}<dt>Pierres</dt><dd>{{ ring.stones }}</dd>{% endif %}
+      <dt>Tailles</dt><dd>{{ ring.size_min }} à {{ ring.size_max }}</dd>
+    </dl>
+    {% if ring.description %}<div class="prose">{{ ring.description|linebreaks }}</div>{% endif %}
+  </div>
+</section>
+
+{% if related %}
+<section class="section container">
+  <h2>Vous aimerez aussi</h2>
+  <div class="grid">{% for ring, price in related %}{% include "includes/ring_card.html" %}{% endfor %}</div>
+</section>
+{% endif %}
+{% endblock %}
