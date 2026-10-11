@@ -17,6 +17,7 @@ from apps.catalog.models import (
     StoneOption,
 )
 from apps.pricing.models import GoldPrice
+from apps.trialkit.models import SampleRing
 
 # Diamond cost per carat option (€ HT, purchase price): natural / lab-grown.
 DIAMOND_CARATS = [
@@ -165,6 +166,7 @@ class Command(BaseCommand):
             )
         self.stdout.write(f"{len(RINGS)} alliances créées ou mises à jour")
         self.seed_product_structure()
+        self.seed_samples()
 
         for data in POSTS:
             category, _ = Category.objects.get_or_create(
@@ -260,3 +262,23 @@ class Command(BaseCommand):
                 for author, rating, text in DEMO_REVIEWS
             )
         self.stdout.write("Collections, solitaires Éclat (5 pierres), FAQ, réassurance et avis de démonstration créés")
+
+    def seed_samples(self):
+        """Internal references for real rings + a stock of dummies for the trial kits."""
+        created = 0
+        for ring in Ring.objects.filter(is_active=True):
+            prefix = "SOL" if ring.category == Ring.Category.SOLITAIRE else "ALL"
+            if not ring.sku:
+                ring.sku = f"{prefix}-{ring.pk:03d}"
+                ring.save(update_fields=["sku"])
+            # Dummies: 3 units per model, a single one for "Lumière" to show an out-of-stock model.
+            _, was_created = SampleRing.objects.get_or_create(
+                ring=ring,
+                defaults={
+                    "reference": f"FAC-{ring.sku}",
+                    "quantity": 1 if ring.name == "Lumière" else 3,
+                    "size": 54,
+                },
+            )
+            created += was_created
+        self.stdout.write(f"Références et stock de factices prêts ({created} factice(s) créé(s))")

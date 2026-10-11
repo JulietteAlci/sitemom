@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from apps.orders.models import Order
 from apps.pricing.models import GoldPrice
-from apps.trialkit.models import TrialKitOrder
+from apps.trialkit.models import SampleRing, TrialKitOrder
 
 from ..services import build_tasks
 
@@ -30,4 +30,8 @@ def dashboard():
         "revenue_month": paid_this_month.aggregate(total=Sum("total"))["total"] or 0,
         "orders_month": paid_this_month.count(),
         "gold": GoldPrice.current(),
+        "kits_out": TrialKitOrder.objects.filter(
+            fulfillment__in=[TrialKitOrder.Fulfillment.SHIPPED, TrialKitOrder.Fulfillment.DELIVERED]
+        ).count(),
+        "samples_out_of_stock": SampleRing.objects.filter(is_active=True).with_availability().filter(available=0).count(),
     }

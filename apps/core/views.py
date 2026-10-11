@@ -7,34 +7,46 @@ from django.views.decorators.cache import cache_page
 
 from apps.blog.models import Post
 from apps.catalog.models import Ring
+from apps.trialkit.models import kit_size_label
 
 
-def trial_kit_price() -> int:
-    return settings.TRIAL_KIT_PRICE_CENTS // 100
+def euros(cents: int) -> str:
+    return f"{cents // 100}\u00a0€"
+
+
+def kit_amounts() -> dict:
+    return {
+        "price": euros(settings.TRIAL_KIT_PRICE_CENTS),
+        "credit": euros(settings.TRIAL_KIT_CREDIT_CENTS),
+        "refund": euros(settings.TRIAL_KIT_REFUND_CENTS),
+        "size": kit_size_label(),
+        "days": settings.TRIAL_KIT_RETURN_DAYS,
+    }
 
 
 def how_it_works_steps():
     """The customer journey, shared by the "Comment ça fonctionne" page, the home page and llms.txt."""
-    price = trial_kit_price()
+    k = kit_amounts()
     return [
         (
-            f"Commandez votre coffret d'essai à {price}\u00a0€",
-            f"Sélectionnez de {settings.TRIAL_KIT_MIN} à {settings.TRIAL_KIT_MAX} alliances parmi nos modèles homme et "
-            f"femme et réglez {price}\u00a0€ en ligne. Vous recevez un code unique, personnel, associé à votre coffret.",
+            f"Commandez votre coffret d'essai à {k['price']}",
+            f"Choisissez {k['size']} alliances parmi nos modèles homme et femme, indiquez vos coordonnées et votre "
+            f"adresse, et réglez {k['price']} en ligne. Un e-mail confirme votre commande avec votre code unique.",
         ),
         (
             "Essayez les alliances chez vous",
-            "Votre coffret arrive à domicile avec un baguier pour mesurer votre tour de doigt. Comparez largeurs, "
-            "profils et teintes à votre rythme, à la lumière de tous les jours.",
+            "Votre coffret arrive à domicile avec un baguier. Les alliances d'essai sont des modèles fidèles à nos "
+            "vraies alliances en or : comparez largeurs, profils et teintes à votre rythme.",
         ),
         (
-            "Renvoyez le coffret d'essai",
-            "Replacez les alliances dans le coffret et renvoyez-le avec l'étiquette retour fournie.",
+            f"Renvoyez le coffret sous {k['days']} jours",
+            f"Utilisez l'étiquette retour reçue par e-mail. Après réception et contrôle du coffret, nous vous "
+            f"remboursons {k['refund']}.",
         ),
         (
             "Commandez vos alliances sur le site",
-            f"Choisissez vos modèles et vos tailles, puis saisissez votre code unique dans le panier : les {price}\u00a0€ du "
-            "coffret sont déduits du montant de votre commande.",
+            f"Choisissez vos modèles et vos tailles, puis saisissez votre code unique dans le panier : "
+            f"{k['credit']} sont déduits de votre commande.",
         ),
         (
             "Recevez vos alliances",
@@ -45,36 +57,39 @@ def how_it_works_steps():
 
 
 def how_it_works(request):
-    price = trial_kit_price()
+    k = kit_amounts()
     faqs = [
         (
-            "Le prix du coffret d'essai est-il remboursé ?",
-            f"Les {price}\u00a0€ du coffret sont intégralement déduits de votre commande d'alliances grâce à votre code "
-            f"unique. Si vous ne commandez pas d'alliances sur le site, ce montant n'est pas remboursé.",
+            "Que devient le prix du coffret d'essai ?",
+            f"Sur les {k['price']} payés, {k['refund']} vous sont remboursés au retour du coffret, après contrôle. "
+            f"Les {k['credit']} restants sont déduits de votre commande d'alliances grâce à votre code unique. "
+            f"Si vous ne commandez pas d'alliances sur le site, ces {k['credit']} ne sont pas remboursés.",
+        ),
+        (
+            "Combien de temps puis-je garder le coffret ?",
+            f"{k['days']} jours après sa livraison. Nous vous envoyons un rappel par e-mail tous les "
+            f"{settings.TRIAL_KIT_REMINDER_EVERY_DAYS} jours jusqu'à son retour.",
         ),
         (
             "Où trouver mon code unique ?",
-            "Il s'affiche sur la page de confirmation de commande du coffret. Il est valable pour une seule commande.",
-        ),
-        (
-            "Puis-je utiliser mon code pour plusieurs commandes ?",
-            "Non : le code est à usage unique. Le montant du coffret est déduit en une fois.",
+            "Dans l'e-mail de confirmation de votre coffret et sur la page de confirmation. Il est valable pour une "
+            "seule commande.",
         ),
         (
             "Les alliances du coffret sont-elles celles que je vais recevoir ?",
-            "Non, le coffret contient des modèles d'essai. Vos alliances sont fabriquées à la commande, dans votre "
-            "taille, au prix du cours de l'or du jour de la commande.",
+            "Non, le coffret contient des modèles d'essai, fidèles aux vraies alliances. Vos alliances en or sont "
+            "fabriquées à la commande, dans votre taille, au prix du cours de l'or du jour de la commande.",
         ),
     ]
     return render(
         request,
         "core/how_it_works.html",
-        {"steps": how_it_works_steps(), "faqs": faqs, "kit_price": price},
+        {"steps": how_it_works_steps(), "faqs": faqs, "kit": k},
     )
 
 
 def home_faq():
-    price = trial_kit_price()
+    k = kit_amounts()
     return [
         (
             "Comment le prix de vos alliances est-il calculé ?",
@@ -84,10 +99,9 @@ def home_faq():
         ),
         (
             "Comment fonctionne le coffret d'essai ?",
-            f"Vous choisissez de {settings.TRIAL_KIT_MIN} à {settings.TRIAL_KIT_MAX} modèles et réglez le coffret "
-            f"{price}\u00a0€. Vous essayez les alliances chez vous avec un baguier, renvoyez le coffret, puis commandez "
-            f"vos alliances : votre code unique déduit les {price}\u00a0€ de la commande. Sans commande, le prix du "
-            "coffret n'est pas remboursé.",
+            f"Vous choisissez {k['size']} modèles et réglez {k['price']}. Vous essayez les alliances chez vous, "
+            f"renvoyez le coffret sous {k['days']} jours et nous vous remboursons {k['refund']}. Les {k['credit']} "
+            "restants sont déduits de votre commande d'alliances avec votre code unique (non remboursés sans commande).",
         ),
         (
             "En quel or sont fabriquées vos alliances ?",

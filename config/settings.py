@@ -172,9 +172,31 @@ GOLD_PRICE_MAX_AGE_MINUTES = int(env("GOLD_PRICE_MAX_AGE_MINUTES", "1440"))
 VAT_RATE = env("VAT_RATE", "0.20")
 
 # --- Trial kit ---
-TRIAL_KIT_MIN = int(env("TRIAL_KIT_MIN", "8"))
-TRIAL_KIT_MAX = int(env("TRIAL_KIT_MAX", "12"))
-# Price of the trial kit, deducted from the ring order via a unique code (not refunded otherwise).
-TRIAL_KIT_PRICE_CENTS = int(env("TRIAL_KIT_PRICE_CENTS", "8000"))
-# Days after shipping before the "check the kit came back" task shows up.
-TRIAL_KIT_RETURN_DAYS = int(env("TRIAL_KIT_RETURN_DAYS", "14"))
+TRIAL_KIT_MIN = int(env("TRIAL_KIT_MIN", "4"))
+TRIAL_KIT_MAX = int(env("TRIAL_KIT_MAX", "4"))
+# Amount paid for the kit (includes the refundable part below).
+TRIAL_KIT_PRICE_CENTS = int(env("TRIAL_KIT_PRICE_CENTS", "10000"))
+# Refunded once the kit is back and checked by the team.
+TRIAL_KIT_REFUND_CENTS = int(env("TRIAL_KIT_REFUND_CENTS", "2000"))
+# Deducted from the ring order with the kit's unique code (not refunded otherwise).
+TRIAL_KIT_CREDIT_CENTS = int(env("TRIAL_KIT_CREDIT_CENTS", "8000"))
+# Days after delivery to send the kit back, estimated transit time, reminder frequency.
+TRIAL_KIT_RETURN_DAYS = int(env("TRIAL_KIT_RETURN_DAYS", "8"))
+TRIAL_KIT_DELIVERY_DAYS = int(env("TRIAL_KIT_DELIVERY_DAYS", "2"))
+TRIAL_KIT_REMINDER_EVERY_DAYS = int(env("TRIAL_KIT_REMINDER_EVERY_DAYS", "2"))
+
+# --- Shop address (return label, packing slip) ---
+SHOP_ADDRESS = env("SHOP_ADDRESS", "Maison Alliance — Atelier\\n1 rue de l'Exemple\\n69000 Lyon\\nFrance").replace("\\n", "\n")
+
+# --- E-mails ---
+# Default: e-mails are printed in the terminal (console). Set EMAIL_HOST… to send real e-mails.
+EMAIL_BACKEND = env(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend" if env("EMAIL_HOST") else "django.core.mail.backends.console.EmailBackend",
+)
+EMAIL_HOST = env("EMAIL_HOST", "")
+EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", f"{SITE_NAME} <bonjour@example.com>")

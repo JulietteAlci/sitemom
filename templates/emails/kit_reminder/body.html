@@ -1,0 +1,13 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<p>Bonjour {{ kit.full_name|default:"" }},</p>
+{% if late %}
+  <p>La date de retour de votre coffret d'essai <strong>{{ kit.reference }}</strong> était fixée au <strong>{{ kit.return_deadline|date:"l j F" }}</strong>. Merci de nous le renvoyer dès que possible.</p>
+{% else %}
+  <p>Petit rappel : votre coffret d'essai <strong>{{ kit.reference }}</strong> est à nous renvoyer avant le <strong>{{ kit.return_deadline|date:"l j F" }}</strong>.</p>
+{% endif %}
+<p><a href="{{ return_label_url }}" style="display:inline-block;background:#8b5a3c;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;">Imprimer mon étiquette retour</a></p>
+<p>Dès réception et contrôle, nous vous remboursons <strong>{{ kit.refund_amount|floatformat:0 }} €</strong>. Votre code de déduction ({{ kit.credit_amount|floatformat:0 }} €) reste valable : <strong>{{ kit.credit_code }}</strong></p>
+<p style="font-size:13px;color:#77716a;">Déjà renvoyé ? Merci, ce message se croise sans doute avec votre colis.</p>
+<p>{{ SITE_NAME }}</p>
+{% endblock %}

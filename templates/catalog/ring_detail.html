@@ -75,8 +75,8 @@
       <p class="small" data-char-count-for="{{ form.comment.id_for_label }}">Caractères utilisés : 0 / 200</p>
 
       <button class="btn btn--block btn--accent" type="submit"{% if not breakdown or not gold_spot.is_fresh %} disabled{% endif %}>Ajouter au panier</button>
-      {% if ring.available_for_trial %}
-        <a class="btn btn--block btn--outline" href="{% url 'trialkit:start' %}?alliance={{ ring.pk }}">Essayer à domicile</a>
+      {% if trial_sample %}
+        <a class="btn btn--block btn--outline" href="{% url 'trialkit:start' %}?factice={{ trial_sample.pk }}">Essayer à domicile</a>
       {% endif %}
     </form>
 

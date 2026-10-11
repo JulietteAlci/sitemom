@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.catalog.models import Ring
@@ -49,17 +49,22 @@ class CoreTests(TestCase):
         self.assertEqual(Decimal(data["eur_per_oz"]), GoldPrice.current().price_per_oz_eur)
 
 
+@override_settings(
+    TRIAL_KIT_PRICE_CENTS=10000, TRIAL_KIT_CREDIT_CENTS=8000, TRIAL_KIT_REFUND_CENTS=2000, TRIAL_KIT_RETURN_DAYS=8
+)
 class HowItWorksTests(TestCase):
     def test_page_describes_the_customer_journey(self):
         response = self.client.get(reverse("core:how_it_works"))
         self.assertEqual(len(response.context["steps"]), 5)
         for text in (
-            "Commandez votre coffret d&#x27;essai à 80\u00a0€",
+            "Commandez votre coffret d&#x27;essai à 100\u00a0€",
             "Essayez les alliances chez vous",
-            "Renvoyez le coffret d&#x27;essai",
+            "Renvoyez le coffret sous 8 jours",
+            "nous vous remboursons 20\u00a0€",
             "Commandez vos alliances sur le site",
+            "80\u00a0€ sont déduits",
             "Recevez vos alliances",
-            "ce montant n&#x27;est pas remboursé",
+            "ces 80\u00a0€ ne sont pas remboursés",
             '"@type":"HowTo"',
         ):
             self.assertContains(response, text)

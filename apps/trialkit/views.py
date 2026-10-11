@@ -5,39 +5,48 @@ import stripe
 from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
-from django.shortcuts import redirect, render
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from apps.catalog.models import Ring
 from apps.orders import payments
 
 from .forms import TrialKitForm
-from .models import TrialKitOrder
+from . import services
+from .models import TrialKitOrder, kit_size_label
 
 logger = logging.getLogger(__name__)
 
 
+def cents(value: int) -> Decimal:
+    return Decimal(value) / 100
+
+
 def trial_kit(request):
-    form = TrialKitForm(request.POST or None, initial={"rings": request.GET.getlist("alliance")})
+    form = TrialKitForm(request.POST or None, initial={"samples": request.GET.getlist("factice")})
     if request.method == "POST" and form.is_valid():
         with transaction.atomic():
             kit = TrialKitOrder.objects.create(
-                price=Decimal(settings.TRIAL_KIT_PRICE_CENTS) / 100,
+                price=cents(settings.TRIAL_KIT_PRICE_CENTS),
+                credit_amount=cents(settings.TRIAL_KIT_CREDIT_CENTS),
+                refund_amount=cents(settings.TRIAL_KIT_REFUND_CENTS),
                 include_sizer=form.cleaned_data["include_sizer"],
                 message=form.cleaned_data["message"],
             )
-            kit.rings.set(form.cleaned_data["rings"])
+            kit.samples.set(form.cleaned_data["samples"])
+        names = ", ".join(sample.ring.name for sample in form.cleaned_data["samples"])
         try:
             session = payments.create_checkout_session(
                 kind="trial_kit",
                 obj=kit,
                 line_items=[
                     payments.line_item(
-                        name=f"Coffret d'essai — {kit.rings.count()} alliances",
+                        name=f"Coffret d'essai — {kit.samples.count()} alliances",
                         amount_cents=settings.TRIAL_KIT_PRICE_CENTS,
                         description=(
-                            "Montant intégralement déduit de votre commande d'alliances grâce à votre code unique. "
-                            "Non remboursé en l'absence de commande."
+                            f"{names}. {kit.refund_amount:.0f} € remboursés au retour du coffret, "
+                            f"{kit.credit_amount:.0f} € déduits de votre commande d'alliances."
                         ),
                     )
                 ],
@@ -51,10 +60,10 @@ def trial_kit(request):
         else:
             return redirect(session.url, permanent=False)
 
-    rings = form.fields["rings"].queryset
-    selected = {str(pk) for pk in (form["rings"].value() or [])}
+    samples = list(form.fields["samples"].queryset)
+    selected = {str(pk) for pk in (form["samples"].value() or [])}
     groups = [
-        (label, [ring for ring in rings if ring.gender == gender])
+        (label, [sample for sample in samples if sample.ring.gender == gender])
         for gender, label in Ring.Gender.choices
     ]
     return render(
@@ -66,7 +75,11 @@ def trial_kit(request):
             "selected": selected,
             "kit_min": settings.TRIAL_KIT_MIN,
             "kit_max": settings.TRIAL_KIT_MAX,
-            "price": Decimal(settings.TRIAL_KIT_PRICE_CENTS) / 100,
+            "kit_size": kit_size_label(),
+            "price": cents(settings.TRIAL_KIT_PRICE_CENTS),
+            "credit": cents(settings.TRIAL_KIT_CREDIT_CENTS),
+            "refund": cents(settings.TRIAL_KIT_REFUND_CENTS),
+            "return_days": settings.TRIAL_KIT_RETURN_DAYS,
         },
     )
 
@@ -74,3 +87,36 @@ def trial_kit(request):
 def trial_kit_success(request):
     kit = TrialKitOrder.objects.filter(stripe_session_id=request.GET.get("session_id", "")).first()
     return render(request, "trialkit/success.html", {"kit": kit})
+
+
+# --- Printable documents -------------------------------------------------------------------
+
+def _print_context(kit):
+    return {
+        "kit": kit,
+        "samples": list(kit.samples.select_related("ring")),
+        "address": services.format_address(kit),
+        "shop_address": settings.SHOP_ADDRESS,
+        "return_days": settings.TRIAL_KIT_RETURN_DAYS,
+        "return_label_url": services.return_label_url(kit),
+        "SITE_NAME": settings.SITE_NAME,
+    }
+
+
+def packing_slip(request, pk):
+    """Bon d'envoi (staff only): delivery note + picking list with the dummies' references."""
+    kit = get_object_or_404(TrialKitOrder, pk=pk, status=TrialKitOrder.Status.PAID)
+    return render(request, "trialkit/print/packing_slip.html", _print_context(kit))
+
+
+def return_label_staff(request, pk):
+    kit = get_object_or_404(TrialKitOrder, pk=pk, status=TrialKitOrder.Status.PAID)
+    return render(request, "trialkit/print/return_label.html", _print_context(kit))
+
+
+def return_label(request, token):
+    """Return label for the customer, reached through the signed link sent by e-mail."""
+    kit = services.kit_from_token(token)
+    if kit is None or kit.status != TrialKitOrder.Status.PAID:
+        raise Http404
+    return render(request, "trialkit/print/return_label.html", _print_context(kit))

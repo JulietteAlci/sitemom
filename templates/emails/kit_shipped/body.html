@@ -1,0 +1,11 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<p>Bonjour {{ kit.full_name|default:"" }},</p>
+<p>Bonne nouvelle : votre coffret d'essai <strong>{{ kit.reference }}</strong> vient d'être expédié !</p>
+<p>{% if kit.tracking_number %}Numéro de suivi : <strong>{{ kit.tracking_number }}</strong><br>{% endif %}Livraison estimée : {{ kit.estimated_delivery|date:"l j F" }}</p>
+<p>Prenez le temps d'essayer les alliances. Vous avez jusqu'au <strong>{{ kit.return_deadline|date:"l j F Y" }}</strong> ({{ return_days }} jours après la livraison) pour nous renvoyer le coffret complet.</p>
+<p><a href="{{ return_label_url }}" style="display:inline-block;background:#8b5a3c;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;">Imprimer mon étiquette retour</a></p>
+<p>Dès réception et contrôle du coffret, nous vous remboursons <strong>{{ kit.refund_amount|floatformat:0 }} €</strong>.<br>
+Votre code pour déduire {{ kit.credit_amount|floatformat:0 }} € de votre commande d'alliances : <strong>{{ kit.credit_code }}</strong></p>
+<p>{{ SITE_NAME }}</p>
+{% endblock %}

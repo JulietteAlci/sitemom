@@ -272,7 +272,7 @@ def demo_checkout(request, session_id):
         lines = [(f"{item.ring_name} — taille {item.size}", item.quantity, item.line_total) for item in obj.items.all()]
         amount, discount = obj.total, obj.discount
     else:
-        lines = [(f"Coffret d'essai — {obj.rings.count()} alliances", 1, obj.price)]
+        lines = [(f"Coffret d'essai — {obj.samples.count()} alliances", 1, obj.price)]
         amount, discount = obj.price, 0
     return render(
         request,

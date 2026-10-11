@@ -24,8 +24,8 @@
     <p>Nos prix suivent le cours spot de l'or{% if gold_spot %} — aujourd'hui {{ gold_spot.price_per_gram_eur|floatformat:2 }} € le gramme d'or pur{% endif %}.</p>
   </div>
   <div>
-    <h2 class="h3">Essayez {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} modèles chez vous</h2>
-    <p>Notre coffret d'essai à {{ TRIAL_KIT_PRICE }} €, déduit de votre commande, vous permet de comparer largeurs, profils et teintes. <a href="{% url 'core:how_it_works' %}">Comment ça fonctionne</a></p>
+    <h2 class="h3">Essayez {{ TRIAL_KIT_SIZE }} modèles chez vous</h2>
+    <p>Coffret d'essai à {{ TRIAL_KIT_PRICE }} € : {{ TRIAL_KIT_REFUND }} € remboursés au retour, {{ TRIAL_KIT_CREDIT }} € déduits de votre commande. <a href="{% url 'core:how_it_works' %}">Comment ça fonctionne</a></p>
   </div>
   <div>
     <h2 class="h3">Façonnées à la main</h2>
@@ -50,7 +50,7 @@
     <div>
       <p class="eyebrow">Coffret d'essai</p>
       <h2>Le bon modèle se choisit au doigt.</h2>
-      <p>Sélectionnez de {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} alliances et essayez-les chez vous avec un baguier. Les {{ TRIAL_KIT_PRICE }} € du coffret sont déduits de votre commande d'alliances grâce à un code unique.</p>
+      <p>Sélectionnez {{ TRIAL_KIT_SIZE }} alliances et essayez-les chez vous avec un baguier pendant {{ TRIAL_KIT_RETURN_DAYS }} jours. {{ TRIAL_KIT_REFUND }} € vous sont remboursés au retour et {{ TRIAL_KIT_CREDIT }} € sont déduits de votre commande d'alliances.</p>
       <p><a href="{% url 'core:how_it_works' %}">Comment ça fonctionne →</a></p>
     </div>
     <a class="btn" href="{% url 'trialkit:start' %}">Composer mon coffret</a>

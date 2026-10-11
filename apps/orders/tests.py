@@ -7,6 +7,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest import mock
 
+from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -161,7 +162,7 @@ class TrialKitCreditTests(TestCase):
 
         GoldPrice.objects.create(price_per_oz_eur=TROY_OUNCE_GRAMS * 100, source="test")
         self.ring = make_ring(labor_cost=Decimal("99.50"))  # 480 € TTC
-        self.kit = TrialKitOrder.objects.create(price=80, status=TrialKitOrder.Status.PAID)
+        self.kit = TrialKitOrder.objects.create(price=100, credit_amount=80, refund_amount=20, status=TrialKitOrder.Status.PAID)
         self.client.post(reverse("orders:cart_add", args=[self.ring.slug]), {"size": 54, "quantity": 1})
 
     def apply(self, code):
@@ -229,7 +230,7 @@ class TrialKitCreditTests(TestCase):
         self.assertEqual(first.status, Order.Status.CANCELLED)
         self.assertEqual((second.status, second.discount), (Order.Status.PENDING, Decimal("80")))
 
-    def test_paid_order_converts_kit(self):
+    def test_paid_order_redeems_code_and_sends_confirmation(self):
         order = Order.objects.create(
             total=400, discount=80, trial_kit=self.kit, gold_spot_eur_per_oz=3000, stripe_session_id="cs_1"
         )
@@ -242,8 +243,9 @@ class TrialKitCreditTests(TestCase):
             },
         )
         self.kit.refresh_from_db()
-        self.assertEqual(self.kit.fulfillment, self.kit.Fulfillment.CONVERTED)
         self.assertEqual(self.kit.redeemed_order, order)
+        # The kit's own logistics (return, refund) are not affected by the ring order.
+        self.assertEqual(self.kit.fulfillment, self.kit.Fulfillment.TO_PREPARE)
 
 
 DEMO_CUSTOMER = {
@@ -257,13 +259,19 @@ DEMO_CUSTOMER = {
 }
 
 
-@override_settings(STRIPE_DEMO_MODE=True, STRIPE_SECRET_KEY="", VAT_RATE="0.20", TRIAL_KIT_PRICE_CENTS=8000)
+@override_settings(
+    STRIPE_DEMO_MODE=True, STRIPE_SECRET_KEY="", VAT_RATE="0.20", TRIAL_KIT_PRICE_CENTS=10000,
+    TRIAL_KIT_CREDIT_CENTS=8000, TRIAL_KIT_REFUND_CENTS=2000, TRIAL_KIT_MIN=4, TRIAL_KIT_MAX=4,
+)
 class DemoModeTests(TestCase):
     """Demo mode lets the whole customer journey be completed without a Stripe account."""
 
     def setUp(self):
         GoldPrice.objects.create(price_per_oz_eur=TROY_OUNCE_GRAMS * 100, source="test")
-        self.rings = [make_ring(name=f"R{i}", slug=f"r{i}", labor_cost=Decimal("99.50")) for i in range(8)]
+        from apps.trialkit.models import SampleRing
+
+        self.rings = [make_ring(name=f"R{i}", slug=f"r{i}", labor_cost=Decimal("99.50")) for i in range(4)]
+        self.samples = [SampleRing.objects.create(reference=f"FAC-{i}", ring=ring) for i, ring in enumerate(self.rings)]
 
     def pay(self, response):
         """Follow the redirect to the demo checkout page and submit it."""
@@ -276,14 +284,16 @@ class DemoModeTests(TestCase):
     def test_full_customer_journey(self, stripe_module):
         from apps.trialkit.models import TrialKitOrder
 
-        # 1. Order the trial kit (80 €).
-        response = self.client.post(reverse("trialkit:start"), {"rings": [r.pk for r in self.rings]})
+        # 1. Order the trial kit (100 € = 80 € credit + 20 € refundable).
+        response = self.client.post(reverse("trialkit:start"), {"samples": [s.pk for s in self.samples]})
         response = self.pay(response)
         kit = TrialKitOrder.objects.get()
         self.assertRedirects(response, f"{reverse('trialkit:success')}?session_id={kit.stripe_session_id}")
         kit.refresh_from_db()
         self.assertEqual((kit.status, kit.email, kit.shipping_address["city"]), ("paid", "claire@example.com", "Paris"))
         self.assertContains(self.client.get(response["Location"]), kit.credit_code)
+        self.assertEqual(len(mail.outbox), 1)  # 2. confirmation e-mail
+        self.assertIn(kit.credit_code, mail.outbox[0].body)
 
         # 4. Order the rings with the unique code: 480 € − 80 €.
         self.client.post(reverse("orders:cart_add", args=[self.rings[0].slug]), {"size": 54, "quantity": 1})
@@ -294,8 +304,8 @@ class DemoModeTests(TestCase):
         self.assertRedirects(response, f"{reverse('orders:success')}?session_id={order.stripe_session_id}")
         order.refresh_from_db()
         self.assertEqual((order.status, order.total, order.discount), ("paid", Decimal("400"), Decimal("80")))
-        kit.refresh_from_db()
-        self.assertEqual(kit.fulfillment, kit.Fulfillment.CONVERTED)
+        self.assertEqual(kit.redeemed_order, order)
+        self.assertIn(order.reference, mail.outbox[-1].subject)  # order confirmation e-mail
 
         # The code cannot be used twice, and Stripe was never called.
         self.client.post(reverse("orders:cart_add", args=[self.rings[1].slug]), {"size": 54, "quantity": 1})

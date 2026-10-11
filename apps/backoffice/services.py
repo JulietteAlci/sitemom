@@ -28,6 +28,7 @@ class TaskItem:
     url: str = ""
     high_priority: bool = False
     actions: list[tuple[str, str, int]] = field(default_factory=list)  # (label, action, pk)
+    links: list[tuple[str, str]] = field(default_factory=list)  # (label, url) — printable documents
 
     @property
     def overdue(self) -> bool:
@@ -68,31 +69,75 @@ def _manual_tasks(end: date):
 
 
 def _trial_kit_tasks():
-    to_ship = TrialKitOrder.objects.filter(
-        status=TrialKitOrder.Status.PAID, fulfillment=TrialKitOrder.Fulfillment.TO_PREPARE
-    ).prefetch_related("rings")
-    for kit in to_ship:
+    kits = TrialKitOrder.objects.filter(
+        status=TrialKitOrder.Status.PAID,
+        fulfillment__in=[
+            TrialKitOrder.Fulfillment.TO_PREPARE,
+            TrialKitOrder.Fulfillment.SHIPPED,
+            TrialKitOrder.Fulfillment.DELIVERED,
+            TrialKitOrder.Fulfillment.RETURNED,
+        ],
+    ).prefetch_related("samples")
+    today = timezone.localdate()
+    for kit in kits:
+        customer = kit.full_name or kit.email
+        if kit.fulfillment == TrialKitOrder.Fulfillment.TO_PREPARE:
+            references = ", ".join(sample.reference for sample in kit.samples.all())
+            yield TaskItem(
+                kind="Coffret",
+                title=f"Préparer et expédier le coffret {kit.reference}",
+                due=timezone.localdate(kit.paid_at) + timedelta(days=1),
+                detail=_join(customer, references, "baguier" if kit.include_sizer else ""),
+                url=_admin_url(kit),
+                high_priority=True,
+                actions=[("Marquer expédié", "kit_shipped", kit.pk)],
+                links=[
+                    ("Bon d'envoi", reverse("backoffice:kit_packing_slip", args=[kit.pk])),
+                    ("Étiquette retour", reverse("backoffice:kit_return_label", args=[kit.pk])),
+                ],
+            )
+        elif kit.fulfillment == TrialKitOrder.Fulfillment.RETURNED:
+            yield TaskItem(
+                kind="Coffret",
+                title=f"Contrôler le coffret {kit.reference}"
+                + (f" et rembourser {kit.refund_amount:.0f} €" if kit.refund_amount else ""),
+                due=timezone.localdate(kit.returned_at) if kit.returned_at else today,
+                detail=_join(customer, "retour hors délai" if kit.is_return_late else "retour dans les délais"),
+                url=_admin_url(kit),
+                high_priority=True,
+                actions=[("Valider et rembourser" if kit.refund_amount else "Valider le contrôle", "kit_refund", kit.pk)],
+                links=[("Bon d'envoi (contrôle)", reverse("backoffice:kit_packing_slip", args=[kit.pk]))],
+            )
+        else:
+            actions = [("Marquer reçu", "kit_received", kit.pk)]
+            if kit.fulfillment == TrialKitOrder.Fulfillment.SHIPPED:
+                actions.insert(0, ("Marquer livré", "kit_delivered", kit.pk))
+            yield TaskItem(
+                kind="Coffret",
+                title=f"Réceptionner le retour du coffret {kit.reference}",
+                due=kit.return_deadline,
+                detail=_join(
+                    customer,
+                    f"retour attendu le {kit.return_deadline:%d/%m}",
+                    f"{kit.reminders_sent} relance{'s' if kit.reminders_sent > 1 else ''}",
+                ),
+                url=_admin_url(kit),
+                actions=actions,
+            )
+
+
+def _reminder_tasks():
+    from apps.trialkit.services import kits_needing_reminder
+
+    kits = kits_needing_reminder()
+    if kits:
         yield TaskItem(
             kind="Coffret",
-            title=f"Préparer et expédier le coffret {kit.reference}",
-            due=timezone.localdate(kit.paid_at) + timedelta(days=1),
-            detail=_join(kit.full_name or kit.email, f"{kit.rings.count()} alliances", "baguier" if kit.include_sizer else ""),
-            url=_admin_url(kit),
-            high_priority=True,
-            actions=[("Marquer expédié", "kit_shipped", kit.pk)],
-        )
-    awaiting_return = TrialKitOrder.objects.filter(
-        fulfillment=TrialKitOrder.Fulfillment.SHIPPED, shipped_at__isnull=False
-    )
-    for kit in awaiting_return:
-        yield TaskItem(
-            kind="Coffret",
-            title=f"Vérifier le retour du coffret {kit.reference}",
-            due=timezone.localdate(kit.shipped_at) + timedelta(days=settings.TRIAL_KIT_RETURN_DAYS),
-            detail=_join(f"Expédié le {timezone.localdate(kit.shipped_at):%d/%m}",
-                         f"relancer {kit.full_name or kit.email or 'le client'} si besoin"),
-            url=_admin_url(kit),
-            actions=[("Marquer retourné", "kit_returned", kit.pk)],
+            title=f"Envoyer {len(kits)} relance{'s' if len(kits) > 1 else ''} de retour de coffret",
+            due=timezone.localdate(),
+            detail=", ".join(kit.reference for kit in kits),
+            url=reverse("admin:trialkit_trialkitorder_changelist") + "?fulfillment__in=shipped,delivered",
+            actions=[("Envoyer les relances", "kit_reminders", 0)],
         )
 
 
@@ -145,6 +190,7 @@ def build_tasks(period: str = "jour") -> list[TaskItem]:
         *_manual_tasks(end),
         *(item for item in _trial_kit_tasks() if item.due <= end),
         *(item for item in _order_tasks() if item.due <= end),
+        *_reminder_tasks(),
         *_gold_price_tasks(),
     ]
     return sorted(items, key=lambda item: (item.due, not item.high_priority, item.title))

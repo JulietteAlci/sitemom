@@ -15,7 +15,7 @@ from .models import Task
 from .services import build_tasks
 
 
-@override_settings(TRIAL_KIT_RETURN_DAYS=14)
+@override_settings(TRIAL_KIT_RETURN_DAYS=8, TRIAL_KIT_DELIVERY_DAYS=2, STRIPE_DEMO_MODE=True)
 class TaskListTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser("admin", "admin@example.com", "pass-1234-xyz")
@@ -48,7 +48,7 @@ class TaskListTests(TestCase):
         kit = TrialKitOrder.objects.create(price=80, status="paid", paid_at=self.now - timedelta(days=1), full_name="Claire")
         TrialKitOrder.objects.create(price=80, status="pending")  # unpaid: no task
         returned_soon = TrialKitOrder.objects.create(
-            price=80, status="paid", paid_at=self.now, fulfillment="shipped", shipped_at=self.now - timedelta(days=10)
+            price=80, status="paid", paid_at=self.now, fulfillment="shipped", shipped_at=self.now - timedelta(days=5)
         )
         order = Order.objects.create(total=500, gold_spot_eur_per_oz=3000, status="paid", paid_at=self.now)
         OrderItem.objects.create(order=order, ring=self.ring, ring_name="Test", size=54, unit_price=500, weight_g=4)
@@ -61,10 +61,10 @@ class TaskListTests(TestCase):
         day = self.titles("jour")
         self.assertIn(f"Préparer et expédier le coffret {kit.reference}", day)
         self.assertIn(f"Lancer la fabrication de la commande {order.reference}", day)
-        self.assertNotIn(f"Vérifier le retour du coffret {returned_soon.reference}", day)
+        self.assertNotIn(f"Réceptionner le retour du coffret {returned_soon.reference}", day)
         week = self.titles("semaine")
-        # Shipped 10 days ago + 14 return days → due in 4 days.
-        self.assertIn(f"Vérifier le retour du coffret {returned_soon.reference}", week)
+        # Shipped 5 days ago + 2 delivery days + 8 days to send it back → due in 5 days.
+        self.assertIn(f"Réceptionner le retour du coffret {returned_soon.reference}", week)
         # Paid 5 days ago, 10-day lead time, 2 shipping days → ship by in 3 days.
         self.assertEqual(in_production.ship_by, self.today + timedelta(days=3))
         self.assertIn(f"Expédier la commande {in_production.reference}", week)
@@ -102,10 +102,11 @@ class TaskListTests(TestCase):
         self.assertEqual((kit.fulfillment, bool(kit.shipped_at)), ("shipped", True))
         self.assertEqual(order.fulfillment, "in_production")
 
-        self.act("kit_returned", kit.pk)
+        self.act("kit_received", kit.pk)
+        self.act("kit_refund", kit.pk)  # nothing to refund on this kit: just validates the check
         self.act("order_shipped", order.pk)
         kit.refresh_from_db(); order.refresh_from_db()
-        self.assertEqual((kit.fulfillment, order.fulfillment), ("returned", "shipped"))
+        self.assertEqual((kit.fulfillment, order.fulfillment), ("refunded", "shipped"))
         self.assertEqual(self.titles("semaine"), [])
 
     def test_action_redirects_only_to_safe_urls(self):

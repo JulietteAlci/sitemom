@@ -1,0 +1,20 @@
+Bonjour {{ kit.full_name|default:"" }},
+
+Merci pour votre commande ! Votre coffret d'essai {{ kit.reference }} est confirmé ({{ kit.price|floatformat:2 }} € payés).
+
+Les alliances que vous allez essayer :
+{% for ring in rings %}- {{ ring.name }}
+{% endfor %}{% if kit.include_sizer %}+ un baguier pour mesurer votre tour de doigt
+{% endif %}
+Adresse de livraison :
+{{ address }}
+
+La suite :
+1. Nous préparons votre coffret et vous prévenons dès son expédition.
+2. Vous disposez de {{ return_days }} jours après la livraison pour nous le renvoyer, avec l'étiquette retour fournie.
+3. Après contrôle du coffret, nous vous remboursons {{ kit.refund_amount|floatformat:0 }} €.
+4. Les {{ kit.credit_amount|floatformat:0 }} € restants sont déduits de votre commande d'alliances avec votre code unique : {{ kit.credit_code }}
+   (sans commande d'alliances, ce montant n'est pas remboursé).
+
+À très vite,
+{{ SITE_NAME }}

@@ -1,0 +1,9 @@
+Bonjour {{ order.full_name|default:"" }},
+
+Merci pour votre commande {{ order.reference }} ({{ order.total|floatformat:2 }} € TTC{% if order.discount %}, dont {{ order.discount|floatformat:0 }} € de coffret d'essai déduits{% endif %}).
+
+{% for item in items %}- {{ item.ring_name }}{% if item.metal %} · {{ item.metal }}{% endif %}{% if item.stone %} · {{ item.stone }}{% endif %} · taille {{ item.size }}{% if item.engraving %} · gravure « {{ item.engraving }} »{% endif %} — {{ item.line_total|floatformat:2 }} €
+{% endfor %}
+Votre bijou est maintenant fabriqué à la main dans notre atelier.{% if order.delivery_deadline %} Livraison au plus tard le {{ order.delivery_deadline|date:"l j F Y" }}.{% endif %}
+
+{{ SITE_NAME }}

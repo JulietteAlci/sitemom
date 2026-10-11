@@ -1,0 +1,18 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<p>Bonjour {{ kit.full_name|default:"" }},</p>
+<p>Merci pour votre commande ! Votre coffret d'essai <strong>{{ kit.reference }}</strong> est confirmé ({{ kit.price|floatformat:2 }} € payés).</p>
+<p><strong>Les alliances que vous allez essayer :</strong></p>
+<ul>{% for ring in rings %}<li>{{ ring.name }}</li>{% endfor %}{% if kit.include_sizer %}<li>un baguier pour mesurer votre tour de doigt</li>{% endif %}</ul>
+<p><strong>Adresse de livraison :</strong><br>{{ address|linebreaksbr }}</p>
+<p><strong>La suite :</strong></p>
+<ol>
+  <li>Nous préparons votre coffret et vous prévenons dès son expédition.</li>
+  <li>Vous disposez de <strong>{{ return_days }} jours après la livraison</strong> pour nous le renvoyer, avec l'étiquette retour fournie.</li>
+  <li>Après contrôle du coffret, nous vous remboursons <strong>{{ kit.refund_amount|floatformat:0 }} €</strong>.</li>
+  <li>Les {{ kit.credit_amount|floatformat:0 }} € restants sont déduits de votre commande d'alliances avec votre code unique :</li>
+</ol>
+<p style="font-family:Georgia,serif;font-size:22px;letter-spacing:2px;border:1px dashed #b08d57;padding:10px 16px;display:inline-block;">{{ kit.credit_code }}</p>
+<p style="font-size:13px;color:#77716a;">Sans commande d'alliances sur le site, ce montant n'est pas remboursé.</p>
+<p>À très vite,<br>{{ SITE_NAME }}</p>
+{% endblock %}

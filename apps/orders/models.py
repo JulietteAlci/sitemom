@@ -103,6 +103,14 @@ class Order(StripeCheckoutMixin):
     def subtotal(self):
         return self.total + self.discount
 
+    def mark_paid(self, session: dict) -> bool:
+        changed = super().mark_paid(session)
+        if changed:
+            from apps.core.emails import send_email
+
+            send_email("order_confirmation", self.email, {"order": self, "items": list(self.items.all())}, self.reference)
+        return changed
+
     @property
     def delivery_deadline(self):
         """Latest delivery date promised on the product pages (payment date + longest lead time)."""
@@ -117,13 +125,6 @@ class Order(StripeCheckoutMixin):
         deadline = self.delivery_deadline
         return deadline - timedelta(days=self.SHIPPING_DAYS) if deadline else None
 
-    def mark_paid(self, session: dict) -> bool:
-        changed = super().mark_paid(session)
-        if changed and self.trial_kit_id:
-            kit = self.trial_kit
-            kit.fulfillment = kit.Fulfillment.CONVERTED
-            kit.save(update_fields=["fulfillment"])
-        return changed
 
 
 class OrderItem(models.Model):

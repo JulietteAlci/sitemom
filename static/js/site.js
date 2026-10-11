@@ -13,7 +13,8 @@ document.querySelectorAll(".trial-form").forEach((form) => {
   const max = Number(form.dataset.max);
   const counter = form.querySelector("[data-counter]");
   const submit = form.querySelector("[data-submit]");
-  const boxes = [...form.querySelectorAll('input[name="rings"]')];
+  // Out-of-stock dummies are rendered disabled and must stay so.
+  const boxes = [...form.querySelectorAll('input[name="samples"]:not([disabled])')];
 
   const update = () => {
     const count = boxes.filter((box) => box.checked).length;

@@ -1,37 +1,38 @@
 {% extends "base.html" %}
 {% load seo %}
-{% block title %}Coffret d'essai : essayez {{ kit_min }} à {{ kit_max }} alliances chez vous — {{ SITE_NAME }}{% endblock %}
-{% block meta_description %}Recevez de {{ kit_min }} à {{ kit_max }} alliances en essai à domicile avec un baguier. Les {{ price|floatformat:0 }} € du coffret sont déduits de votre commande d'alliances.{% endblock %}
+{% block title %}Coffret d'essai : essayez {{ kit_size }} alliances chez vous — {{ SITE_NAME }}{% endblock %}
+{% block meta_description %}Recevez {{ kit_size }} alliances en essai à domicile avec un baguier. {{ refund|floatformat:0 }} € remboursés au retour, {{ credit|floatformat:0 }} € déduits de votre commande d'alliances.{% endblock %}
 
 {% block content %}
 <section class="section container">
   <p class="eyebrow">Coffret d'essai</p>
   <h1>Essayez vos alliances chez vous</h1>
   <ol class="steps">
-    <li><strong>Choisissez</strong> de {{ kit_min }} à {{ kit_max }} modèles ci-dessous et réglez le coffret {{ price|euros }}.</li>
-    <li><strong>Essayez</strong> les alliances chez vous, avec un baguier pour mesurer votre tour de doigt.</li>
-    <li><strong>Renvoyez</strong> le coffret d'essai.</li>
-    <li><strong>Commandez</strong> vos alliances sur le site : votre code unique déduit les {{ price|euros }} du coffret.</li>
-    <li><strong>Recevez</strong> vos alliances, façonnées à la main dans notre atelier.</li>
+    <li><strong>Choisissez</strong> {{ kit_size }} modèles ci-dessous et réglez le coffret {{ price|euros }}.</li>
+    <li><strong>Recevez</strong> votre coffret avec un baguier et essayez les alliances chez vous.</li>
+    <li><strong>Renvoyez</strong> le coffret dans les {{ return_days }} jours suivant la livraison, avec l'étiquette retour fournie : nous vous remboursons {{ refund|euros }} après contrôle.</li>
+    <li><strong>Commandez</strong> vos alliances sur le site : votre code unique déduit {{ credit|euros }} de votre commande.</li>
   </ol>
-  <p class="notice">Sans commande d'alliances sur le site, le prix du coffret n'est pas remboursé. <a href="{% url 'core:how_it_works' %}">En savoir plus</a></p>
+  <p class="notice">Les alliances du coffret sont des modèles d'essai, fidèles aux vraies alliances en or. Sans commande d'alliances sur le site, les {{ credit|euros }} ne sont pas remboursés. <a href="{% url 'core:how_it_works' %}">En savoir plus</a></p>
 
   <form method="post" class="trial-form" data-min="{{ kit_min }}" data-max="{{ kit_max }}">
     {% csrf_token %}
-    {% if form.rings.errors %}<div class="message message--error">{{ form.rings.errors }}</div>{% endif %}
+    {% if form.samples.errors %}<div class="message message--error">{{ form.samples.errors }}</div>{% endif %}
 
-    {% for label, rings in groups %}
+    {% for label, samples in groups %}
       <h2>{{ label }}</h2>
       <div class="grid trial-grid">
-        {% for ring in rings %}
-          <label class="trial-option">
-            <input type="checkbox" name="rings" value="{{ ring.pk }}"{% if ring.pk|stringformat:"s" in selected %} checked{% endif %}>
+        {% for sample in samples %}{% with ring=sample.ring %}
+          <label class="trial-option{% if not sample.available %} trial-option--out{% endif %}">
+            <input type="checkbox" name="samples" value="{{ sample.pk }}"{% if sample.pk|stringformat:"s" in selected and sample.available %} checked{% endif %}{% if not sample.available %} disabled{% endif %}>
             <span class="trial-option__visual">{% include "includes/ring_visual.html" %}</span>
             <span class="trial-option__name">{{ ring.name }}</span>
-            <span class="small">{{ ring.get_color_display }} · {{ ring.width_mm }} mm</span>
+            <span class="small">{% if sample.available %}{{ ring.get_color_display }} · {{ ring.width_mm }} mm{% else %}Indisponible actuellement{% endif %}</span>
           </label>
-        {% endfor %}
+        {% endwith %}{% endfor %}
       </div>
+    {% empty %}
+      <p>Aucun modèle n'est disponible à l'essai pour le moment.</p>
     {% endfor %}
 
     <div class="stack trial-options">
@@ -40,7 +41,7 @@
     </div>
 
     <div class="trial-summary">
-      <p><span data-counter>{{ selected|length }}</span> / {{ kit_max }} alliances sélectionnées <span class="small">(minimum {{ kit_min }})</span></p>
+      <p><span data-counter>{{ selected|length }}</span> / {{ kit_max }} alliances sélectionnées{% if kit_min != kit_max %} <span class="small">(minimum {{ kit_min }})</span>{% endif %}</p>
       <button class="btn" type="submit" data-submit>Commander mon coffret — {{ price|euros }}</button>
     </div>
   </form>

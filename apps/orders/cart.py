@@ -77,7 +77,7 @@ class Cart:
         error = kit.credit_unavailable_reason()
         if error:
             return TrialKitCredit(code=code, kit=kit, error=error)
-        return TrialKitCredit(code=code, kit=kit, amount=min(kit.price, subtotal or Decimal(0)))
+        return TrialKitCredit(code=code, kit=kit, amount=min(kit.credit_amount, subtotal or Decimal(0)))
 
     def _save(self):
         self.session[self.SESSION_KEY] = self._items

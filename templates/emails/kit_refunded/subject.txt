@@ -1,0 +1,1 @@
+Votre coffret d'essai est bien rentré : {{ kit.refund_amount|floatformat:0 }} € remboursés

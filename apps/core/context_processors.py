@@ -1,5 +1,7 @@
 from django.conf import settings
 
+from apps.trialkit.models import kit_size_label
+
 
 def site(request):
     return {
@@ -14,4 +16,8 @@ def site(request):
         "SITE_EMAIL": settings.SITE_EMAIL,
         "RETURN_DAYS": settings.RETURN_DAYS,
         "TRIAL_KIT_PRICE": settings.TRIAL_KIT_PRICE_CENTS // 100,
+        "TRIAL_KIT_SIZE": kit_size_label(),
+        "TRIAL_KIT_CREDIT": settings.TRIAL_KIT_CREDIT_CENTS // 100,
+        "TRIAL_KIT_REFUND": settings.TRIAL_KIT_REFUND_CENTS // 100,
+        "TRIAL_KIT_RETURN_DAYS": settings.TRIAL_KIT_RETURN_DAYS,
     }

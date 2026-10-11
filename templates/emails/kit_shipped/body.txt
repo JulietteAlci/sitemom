@@ -1,0 +1,15 @@
+Bonjour {{ kit.full_name|default:"" }},
+
+Bonne nouvelle : votre coffret d'essai {{ kit.reference }} vient d'être expédié !
+{% if kit.tracking_number %}Numéro de suivi : {{ kit.tracking_number }}
+{% endif %}Livraison estimée : {{ kit.estimated_delivery|date:"l j F" }}
+
+Prenez le temps d'essayer les alliances. Vous avez jusqu'au {{ kit.return_deadline|date:"l j F Y" }} ({{ return_days }} jours après la livraison) pour nous renvoyer le coffret complet.
+
+Votre étiquette retour (à imprimer et coller sur le colis) :
+{{ return_label_url }}
+
+Dès réception et contrôle du coffret, nous vous remboursons {{ kit.refund_amount|floatformat:0 }} €.
+Votre code pour déduire {{ kit.credit_amount|floatformat:0 }} € de votre commande d'alliances : {{ kit.credit_code }}
+
+{{ SITE_NAME }}

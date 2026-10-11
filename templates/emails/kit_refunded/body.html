@@ -1,0 +1,9 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<p>Bonjour {{ kit.full_name|default:"" }},</p>
+<p>Nous avons bien reçu et contrôlé votre coffret d'essai <strong>{{ kit.reference }}</strong>. Merci !</p>
+<p>Nous venons de vous rembourser <strong>{{ kit.refund_amount|floatformat:2 }} €</strong> sur votre moyen de paiement (comptez quelques jours selon votre banque).</p>
+<p>Vous avez choisi vos alliances ? Votre code <strong>{{ kit.credit_code }}</strong> déduit {{ kit.credit_amount|floatformat:0 }} € de votre commande.</p>
+<p><a href="{{ SITE_URL }}" style="display:inline-block;background:#8b5a3c;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;">Choisir mes alliances</a></p>
+<p>{{ SITE_NAME }}</p>
+{% endblock %}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block title %}{% endblock %} — {{ kit.reference }}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 13px/1.45 Helvetica, Arial, sans-serif; color: #111; background: #eee; }
+    .sheet { background: #fff; margin: 24px auto; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
+    .toolbar { text-align: center; margin: 16px; }
+    .toolbar button { font: inherit; padding: 10px 20px; border: 0; border-radius: 6px; background: #1d1b18; color: #fff; cursor: pointer; }
+    h1, h2 { margin: 0 0 6px; }
+    .muted { color: #555; }
+    .address { white-space: pre-line; font-size: 15px; line-height: 1.4; }
+    .barcode { width: 100%; height: 56px; display: block; }
+    .ref { font-family: "Courier New", monospace; font-weight: 700; letter-spacing: 1px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #ccc; padding: 7px 6px; text-align: left; vertical-align: top; }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #555; }
+    .box { display: inline-block; width: 14px; height: 14px; border: 1.5px solid #111; vertical-align: middle; }
+    @media print {
+      body { background: #fff; }
+      .sheet { margin: 0; box-shadow: none; }
+      .toolbar { display: none; }
+    }
+    {% block style %}{% endblock %}
+  </style>
+</head>
+<body>
+  <div class="toolbar"><button type="button" onclick="window.print()">Imprimer</button></div>
+  {% block content %}{% endblock %}
+</body>
+</html>

@@ -117,6 +117,10 @@ class Ring(models.Model):
 
     name = models.CharField("nom", max_length=120)
     slug = models.SlugField(unique=True, max_length=140)
+    sku = models.CharField(
+        "référence", max_length=40, blank=True, db_index=True,
+        help_text="Référence interne (ex. SOL-ECL-01) : sert à remplir les coffrets d'essai.",
+    )
     category = models.CharField("catégorie", max_length=12, choices=Category.choices, default=Category.WEDDING_BAND)
     gender = models.CharField("genre", max_length=10, choices=Gender.choices, db_index=True)
     collections = models.ManyToManyField(Collection, blank=True, related_name="rings")
@@ -191,7 +195,6 @@ class Ring(models.Model):
     engraving_max_length = models.PositiveSmallIntegerField(
         "caractères de gravure max.", default=40, validators=[MaxValueValidator(100)]
     )
-    available_for_trial = models.BooleanField("disponible en coffret d'essai", default=True)
     is_featured = models.BooleanField("mise en avant", default=False)
     is_active = models.BooleanField("en ligne", default=True)
     position = models.PositiveIntegerField(default=0)
@@ -209,6 +212,14 @@ class Ring(models.Model):
 
     def __str__(self):
         return self.name
+
+    def trial_sample(self):
+        """An active dummy of this ring with at least one unit on the shelf, if any."""
+        return self.samples.filter(is_active=True).with_availability().filter(available__gt=0).first()
+
+    @property
+    def reference(self) -> str:
+        return self.sku or self.slug.upper()
 
     def clean(self):
         if self.size_min and self.size_max and self.size_min > self.size_max:

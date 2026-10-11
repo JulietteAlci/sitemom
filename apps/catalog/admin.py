@@ -41,7 +41,7 @@ class RingAdmin(admin.ModelAdmin):
         "position",
     )
     list_editable = ("is_featured", "is_active", "position")
-    list_filter = ("category", "gender", "main_stone", "collections", "metals", "is_active", "available_for_trial")
+    list_filter = ("category", "gender", "main_stone", "collections", "metals", "is_active")
     search_fields = ("name", "short_description")
     prepopulated_fields = {"slug": ("name",)}
     filter_horizontal = ("collections", "metals")
@@ -74,7 +74,6 @@ class RingAdmin(admin.ModelAdmin):
                 "fields": (
                     ("engravable", "engraving_max_length"),
                     "lead_time_days",
-                    "available_for_trial",
                     "is_featured",
                     "is_active",
                     "position",

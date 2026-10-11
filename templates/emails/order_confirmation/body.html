@@ -1,0 +1,8 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<p>Bonjour {{ order.full_name|default:"" }},</p>
+<p>Merci pour votre commande <strong>{{ order.reference }}</strong> ({{ order.total|floatformat:2 }} € TTC{% if order.discount %}, dont {{ order.discount|floatformat:0 }} € de coffret d'essai déduits{% endif %}).</p>
+<ul>{% for item in items %}<li>{{ item.ring_name }}{% if item.metal %} · {{ item.metal }}{% endif %}{% if item.stone %} · {{ item.stone }}{% endif %} · taille {{ item.size }}{% if item.engraving %} · gravure « {{ item.engraving }} »{% endif %} — {{ item.line_total|floatformat:2 }} €</li>{% endfor %}</ul>
+<p>Votre bijou est maintenant fabriqué à la main dans notre atelier.{% if order.delivery_deadline %} Livraison au plus tard le <strong>{{ order.delivery_deadline|date:"l j F Y" }}</strong>.{% endif %}</p>
+<p>{{ SITE_NAME }}</p>
+{% endblock %}

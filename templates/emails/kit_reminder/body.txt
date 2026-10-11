@@ -1,0 +1,11 @@
+Bonjour {{ kit.full_name|default:"" }},
+
+{% if late %}La date de retour de votre coffret d'essai {{ kit.reference }} était fixée au {{ kit.return_deadline|date:"l j F" }}. Merci de nous le renvoyer dès que possible.{% else %}Petit rappel : votre coffret d'essai {{ kit.reference }} est à nous renvoyer avant le {{ kit.return_deadline|date:"l j F" }}.{% endif %}
+
+Votre étiquette retour : {{ return_label_url }}
+
+Dès réception et contrôle, nous vous remboursons {{ kit.refund_amount|floatformat:0 }} €. Votre code de déduction ({{ kit.credit_amount|floatformat:0 }} €) reste valable : {{ kit.credit_code }}
+
+Déjà renvoyé ? Merci, ce message se croise sans doute avec votre colis.
+
+{{ SITE_NAME }}

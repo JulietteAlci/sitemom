@@ -1,12 +1,12 @@
 {% autoescape off %}{% load seo %}# {{ SITE_NAME }}
 
-> Joaillier français spécialisé dans les alliances en or 18 carats (homme et femme), fabriquées à la main en France en or recyclé. Les prix sont indexés en temps réel sur le cours spot de l'or et un coffret d'essai de {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} alliances permet d'essayer les modèles à domicile.
+> Joaillier français spécialisé dans les alliances en or 18 carats (homme et femme), fabriquées à la main en France en or recyclé. Les prix sont indexés en temps réel sur le cours spot de l'or et un coffret d'essai de {{ TRIAL_KIT_SIZE }} alliances permet d'essayer les modèles à domicile.
 
 ## Points clés
 
 - Prix = poids d'or fin × cours spot de l'or + façon de l'atelier + TVA 20 %.{% if gold_spot %}
 - Cours de l'or utilisé au {{ gold_spot.fetched_at|date:"d/m/Y H:i" }} : {{ gold_spot.price_per_gram_eur|floatformat:2 }} € par gramme d'or pur ({{ gold_spot.price_per_oz_eur|floatformat:2 }} € l'once troy).{% endif %}
-- Coffret d'essai à {{ TRIAL_KIT_PRICE }} € : {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} modèles, baguier inclus. Le prix est déduit de la commande d'alliances grâce à un code unique ; il n'est pas remboursé sans commande.
+- Coffret d'essai à {{ TRIAL_KIT_PRICE }} € : {{ TRIAL_KIT_SIZE }} modèles d'essai, baguier inclus, à renvoyer sous {{ TRIAL_KIT_RETURN_DAYS }} jours après livraison. {{ TRIAL_KIT_REFUND }} € remboursés au retour ; {{ TRIAL_KIT_CREDIT }} € déduits de la commande d'alliances grâce à un code unique (non remboursés sans commande).
 - Livraison : France, Belgique, Luxembourg, Suisse, Monaco.
 
 ## Comment ça fonctionne

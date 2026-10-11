@@ -1,23 +1,22 @@
 from django import forms
-from django.conf import settings
 
-from apps.catalog.models import Ring
-
-from .models import validate_selection_size
+from .models import SampleRing, validate_selection_size
 
 
-class RingChoiceField(forms.ModelMultipleChoiceField):
+class SampleChoiceField(forms.ModelMultipleChoiceField):
     def label_from_instance(self, obj):
-        return obj.name
+        return obj.ring.name
 
 
 class TrialKitForm(forms.Form):
-    rings = RingChoiceField(
-        queryset=Ring.objects.none(),
+    samples = SampleChoiceField(
+        queryset=SampleRing.objects.none(),
         widget=forms.CheckboxSelectMultiple,
         label="Vos alliances à essayer",
     )
-    include_sizer = forms.BooleanField(label="Ajouter un baguier pour mesurer votre tour de doigt", required=False, initial=True)
+    include_sizer = forms.BooleanField(
+        label="Ajouter un baguier pour mesurer votre tour de doigt", required=False, initial=True
+    )
     message = forms.CharField(
         label="Un mot pour l'atelier (facultatif)",
         required=False,
@@ -27,12 +26,17 @@ class TrialKitForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["rings"].queryset = Ring.objects.filter(is_active=True, available_for_trial=True)
-        self.fields["rings"].help_text = (
-            f"Sélectionnez entre {settings.TRIAL_KIT_MIN} et {settings.TRIAL_KIT_MAX} modèles."
+        self.fields["samples"].queryset = (
+            SampleRing.objects.filter(is_active=True, ring__is_active=True).select_related("ring").with_availability()
         )
 
-    def clean_rings(self):
-        rings = self.cleaned_data["rings"]
-        validate_selection_size(len(rings))
-        return rings
+    def clean_samples(self):
+        samples = self.cleaned_data["samples"]
+        validate_selection_size(len(samples))
+        unavailable = [sample.ring.name for sample in samples if sample.available <= 0]
+        if unavailable:
+            raise forms.ValidationError(
+                "Ces modèles viennent d'être réservés par d'autres clients : "
+                + ", ".join(unavailable) + ". Merci d'en choisir d'autres."
+            )
+        return samples

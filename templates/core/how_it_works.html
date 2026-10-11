@@ -2,12 +2,12 @@
 {% load seo %}
 
 {% block title %}Comment ça fonctionne : essayez, puis commandez vos alliances — {{ SITE_NAME }}{% endblock %}
-{% block meta_description %}Commandez un coffret d'essai à {{ kit_price }} €, essayez {{ TRIAL_KIT_MIN }} à {{ TRIAL_KIT_MAX }} alliances chez vous, renvoyez-le, puis commandez : les {{ kit_price }} € sont déduits grâce à votre code unique.{% endblock %}
+{% block meta_description %}Commandez un coffret d'essai à {{ kit.price }}, essayez {{ kit.size }} alliances chez vous, renvoyez-le sous {{ kit.days }} jours ({{ kit.refund }} remboursés), puis commandez : {{ kit.credit }} déduits grâce à votre code unique.{% endblock %}
 {% block og_title %}Comment ça fonctionne — {{ SITE_NAME }}{% endblock %}
 
 {% block structured_data %}
 {% breadcrumb_jsonld "Accueil" "/" "Comment ça fonctionne" request.path %}
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"HowTo","name":"Choisir et commander ses alliances avec le coffret d'essai","inLanguage":"fr-FR","estimatedCost":{"@type":"MonetaryAmount","currency":"EUR","value":"{{ kit_price }}"},"step":[{% for title, text in steps %}{"@type":"HowToStep","position":{{ forloop.counter }},"name":"{{ title|escapejs }}","text":"{{ text|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"HowTo","name":"Choisir et commander ses alliances avec le coffret d'essai","inLanguage":"fr-FR","estimatedCost":{"@type":"MonetaryAmount","currency":"EUR","value":"{{ TRIAL_KIT_PRICE }}"},"step":[{% for title, text in steps %}{"@type":"HowToStep","position":{{ forloop.counter }},"name":"{{ title|escapejs }}","text":"{{ text|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{% for question, answer in faqs %}{"@type":"Question","name":"{{ question|escapejs }}","acceptedAnswer":{"@type":"Answer","text":"{{ answer|escapejs }}"}}{% if not forloop.last %},{% endif %}{% endfor %}]}</script>
 {% endblock %}
 
@@ -30,12 +30,12 @@
 
   <aside class="notice" role="note">
     <p class="notice__title">Bon à savoir</p>
-    <p>Le prix du coffret d'essai ({{ kit_price }} €) est <strong>intégralement déduit</strong> de votre commande d'alliances grâce à votre code unique.
-      <strong>Si vous ne commandez pas d'alliances sur le site, ce montant n'est pas remboursé.</strong></p>
+    <p>Sur les {{ kit.price }} du coffret d'essai, <strong>{{ kit.refund }} vous sont remboursés</strong> au retour du coffret, après contrôle, et <strong>{{ kit.credit }} sont déduits</strong> de votre commande d'alliances grâce à votre code unique.
+      <strong>Si vous ne commandez pas d'alliances sur le site, ces {{ kit.credit }} ne sont pas remboursés.</strong></p>
   </aside>
 
   <p class="journey__cta">
-    <a class="btn" href="{% url 'trialkit:start' %}">Commander mon coffret d'essai — {{ kit_price }} €</a>
+    <a class="btn" href="{% url 'trialkit:start' %}">Commander mon coffret d'essai — {{ kit.price }}</a>
     <a class="btn btn--ghost" href="{% url 'catalog:ring_list' %}">Voir les alliances</a>
   </p>
 </section>

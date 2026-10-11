@@ -234,3 +234,5 @@ html[data-theme="dark"] .task__badge { background: #2a2623; color: #e8e3dd; }
 }
 .tasks__empty { text-align: center; padding: 56px 16px; background: var(--card-bg); border: 1px dashed var(--border-color); border-radius: 16px; color: var(--body-quiet-color); }
 .tasks__empty-icon { font-size: 2rem; color: #3aa76d; margin: 0; }
+.task__btn--link { text-decoration: none !important; display: inline-block; }
+.task__actions { flex-wrap: wrap; justify-content: flex-end; }

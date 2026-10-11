@@ -1,3 +1,4 @@
+import stripe
 from django import forms
 from django.contrib import admin, messages
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,6 +10,8 @@ from django.views.decorators.http import require_POST
 from apps.orders.models import Order
 from apps.pricing.providers import GoldPriceUnavailable
 from apps.pricing.services import SuspiciousGoldPrice, refresh_gold_price
+from apps.orders.payments import PaymentsNotConfigured
+from apps.trialkit import services as kit_services
 from apps.trialkit.models import TrialKitOrder
 
 from .models import Task
@@ -48,6 +51,14 @@ def task_list(request):
     return render(request, "backoffice/task_list.html", context)
 
 
+KIT_TRANSITIONS = {
+    "kit_shipped": kit_services.ship,
+    "kit_delivered": kit_services.mark_delivered,
+    "kit_received": kit_services.receive,
+    "kit_refund": kit_services.refund,
+}
+
+
 def _set(obj, **fields):
     for name, value in fields.items():
         setattr(obj, name, value)
@@ -60,10 +71,17 @@ def task_action(request):
     now = timezone.now()
     if action == "task_done":
         get_object_or_404(Task, pk=pk).mark_done()
-    elif action == "kit_shipped":
-        _set(get_object_or_404(TrialKitOrder, pk=pk), fulfillment=TrialKitOrder.Fulfillment.SHIPPED, shipped_at=now)
-    elif action == "kit_returned":
-        _set(get_object_or_404(TrialKitOrder, pk=pk), fulfillment=TrialKitOrder.Fulfillment.RETURNED, returned_at=now)
+    elif action in KIT_TRANSITIONS:
+        kit = get_object_or_404(TrialKitOrder, pk=pk)
+        try:
+            KIT_TRANSITIONS[action](kit)
+        except (kit_services.KitTransitionError, PaymentsNotConfigured, stripe.StripeError) as exc:
+            messages.error(request, str(exc))
+            return _back(request)
+    elif action == "kit_reminders":
+        sent = kit_services.send_due_reminders()
+        messages.success(request, f"{sent} relance{'s' if sent > 1 else ''} envoyée{'s' if sent > 1 else ''}.")
+        return _back(request)
     elif action == "order_production":
         _set(get_object_or_404(Order, pk=pk), fulfillment=Order.Fulfillment.IN_PRODUCTION)
     elif action == "order_shipped":

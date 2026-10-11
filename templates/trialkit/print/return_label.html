@@ -1,0 +1,41 @@
+{% extends "trialkit/print/base.html" %}
+{% load barcode %}
+{% block title %}Étiquette retour{% endblock %}
+{% block style %}
+  .sheet { width: 150mm; min-height: 100mm; padding: 6mm; border: 2px solid #111; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 2px; }
+  .to { border: 2px solid #111; padding: 4mm; }
+  .to .address { font-size: 17px; font-weight: 700; }
+  .from .address { font-size: 12px; }
+  .foot { margin-top: 4mm; display: flex; align-items: center; gap: 6mm; }
+  .help { max-width: 150mm; margin: 0 auto 24px; color: #444; }
+  @page { size: 150mm 100mm; margin: 0; }
+  @media print { .help { display: none; } }
+{% endblock %}
+{% block content %}
+<div class="sheet">
+  <div class="row">
+    <div class="from">
+      <div class="label">Expéditeur</div>
+      <div class="address">{{ address|default:"—" }}</div>
+    </div>
+    <div class="to">
+      <div class="label">Destinataire — retour coffret</div>
+      <div class="address">{{ shop_address }}</div>
+    </div>
+  </div>
+  <div class="foot">
+    <div style="flex:1">{% barcode_svg kit.reference %}</div>
+    <div>
+      <div class="label">Référence</div>
+      <div class="ref" style="font-size:16px">{{ kit.reference }}</div>
+      <div class="muted">{{ samples|length }} alliance{{ samples|length|pluralize }}{% if kit.include_sizer %} + baguier{% endif %}</div>
+    </div>
+  </div>
+</div>
+<div class="help">
+  <p><strong>Comment renvoyer votre coffret ?</strong> Replacez les {{ samples|length }} alliances{% if kit.include_sizer %} et le baguier{% endif %} dans le coffret, imprimez cette étiquette et collez-la sur le colis, puis déposez-le{% if kit.return_deadline %} avant le <strong>{{ kit.return_deadline|date:"l j F Y" }}</strong>{% endif %}.
+  Dès réception et contrôle, nous vous remboursons {{ kit.refund_amount|floatformat:0 }} €.</p>
+</div>
+{% endblock %}

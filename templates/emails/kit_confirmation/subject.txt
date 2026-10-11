@@ -1,0 +1,1 @@
+Votre coffret d'essai {{ kit.reference }} est confirmé

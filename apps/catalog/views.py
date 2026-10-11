@@ -147,6 +147,7 @@ def ring_detail(request, slug):
             "breakdown": breakdown,
             "form": form,
             "delivery_date": ring.delivery_date(),
+            "trial_sample": ring.trial_sample(),
             "siblings": [(r, r.starting_price) for r in siblings],
             "collection": collection,
             "same_collection": [(r, r.starting_price) for r in same_collection],

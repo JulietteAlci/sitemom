@@ -1,0 +1,10 @@
+Bonjour {{ kit.full_name|default:"" }},
+
+Nous avons bien reçu et contrôlé votre coffret d'essai {{ kit.reference }}. Merci !
+
+Nous venons de vous rembourser {{ kit.refund_amount|floatformat:2 }} € sur votre moyen de paiement (comptez quelques jours selon votre banque).
+
+Vous avez choisi vos alliances ? Votre code {{ kit.credit_code }} déduit {{ kit.credit_amount|floatformat:0 }} € de votre commande :
+{{ SITE_URL }}
+
+{{ SITE_NAME }}

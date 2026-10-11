@@ -29,6 +29,13 @@
     <a class="kpi" href="{% url 'admin:trialkit_trialkitorder_changelist' %}?status__exact=paid&fulfillment__exact=to_prepare">
       <span class="kpi__label">Coffrets à expédier</span><span class="kpi__value">{{ stats.kits_to_ship }}</span>
     </a>
+    <a class="kpi" href="{% url 'admin:trialkit_trialkitorder_changelist' %}?fulfillment__in=shipped,delivered">
+      <span class="kpi__label">Coffrets chez les clients</span><span class="kpi__value">{{ stats.kits_out }}</span>
+    </a>
+    <a class="kpi" href="{% url 'admin:trialkit_samplering_changelist' %}">
+      <span class="kpi__label">Factices épuisés</span><span class="kpi__value">{{ stats.samples_out_of_stock }}</span>
+      <span class="kpi__sub{% if stats.samples_out_of_stock %} kpi__sub--alert{% endif %}">{% if stats.samples_out_of_stock %}modèles non proposés à l'essai{% else %}tous disponibles{% endif %}</span>
+    </a>
     <a class="kpi" href="{% url 'admin:orders_order_changelist' %}?status__exact=paid">
       <span class="kpi__label">Chiffre d'affaires du mois</span><span class="kpi__value">{{ stats.revenue_month|floatformat:0|intcomma }} €</span>
       <span class="kpi__sub">{{ stats.orders_month }} commande{{ stats.orders_month|pluralize }}</span>

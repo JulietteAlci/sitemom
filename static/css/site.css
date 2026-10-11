@@ -275,3 +275,4 @@ tr.total th, tr.total td, tfoot th { font-weight: 500; }
 .ring-visual__stone--saphir { fill: #23408e; }
 .ring-visual__stone--rubis { fill: #a3162b; }
 .ring-visual__stone--emeraude { fill: #1d7a4c; }
+.trial-option--out { opacity: .45; cursor: not-allowed; }

@@ -92,6 +92,23 @@ def create_checkout_session(
     return session
 
 
+def refund_payment(payment_intent: str, amount_cents: int, obj) -> str:
+    """Refund part of a payment. Returns the refund id (simulated in demo mode)."""
+    if settings.STRIPE_DEMO_MODE or payment_intent.startswith("demo_"):
+        return f"demo_re_{secrets.token_hex(6)}"
+    if not payment_intent:
+        raise PaymentsNotConfigured(f"Aucun paiement Stripe associé à {obj.reference}.")
+    if not settings.STRIPE_SECRET_KEY:
+        raise PaymentsNotConfigured("STRIPE_SECRET_KEY is not set")
+    result = stripe.Refund.create(
+        api_key=settings.STRIPE_SECRET_KEY,
+        payment_intent=payment_intent,
+        amount=amount_cents,
+        metadata={"reference": obj.reference},
+    )
+    return result.id
+
+
 def parse_webhook(payload: bytes, signature: str) -> dict:
     """Verify the Stripe signature and return the event as a plain dict.
 
