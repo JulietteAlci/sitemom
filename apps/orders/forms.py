@@ -1,32 +1,60 @@
 from django import forms
+from django.core.validators import MaxLengthValidator
 
 from .cart import MAX_QUANTITY
 from .payments import SHIPPING_COUNTRIES
 
 
+COMMENT_MAX_LENGTH = 200
+
+
 class AddToCartForm(forms.Form):
-    size = forms.TypedChoiceField(label="Taille (tour de doigt)", coerce=int)
-    engraving = forms.CharField(
-        label="Gravure intérieure (offerte)",
-        max_length=40,
+    """Product page form. Metal, stone and size come from the option panel (hidden fields)."""
+
+    size = forms.TypedChoiceField(label="Taille", coerce=int, widget=forms.HiddenInput)
+    metal = forms.ChoiceField(label="Métal", required=False, widget=forms.HiddenInput)
+    stone = forms.TypedChoiceField(label="Pierre", coerce=int, required=False, widget=forms.HiddenInput)
+    engraving = forms.CharField(label="Votre gravure", required=False)
+    comment = forms.CharField(
+        label="Commentaire",
+        max_length=COMMENT_MAX_LENGTH,
         required=False,
-        widget=forms.TextInput(attrs={"placeholder": "Ex. : J & M — 12.06.2027"}),
+        widget=forms.Textarea(
+            attrs={"rows": 3, "maxlength": COMMENT_MAX_LENGTH,
+                   "placeholder": "Date de livraison souhaitée, demande particulière…"}
+        ),
     )
     quantity = forms.TypedChoiceField(
-        label="Quantité", coerce=int, choices=[(i, i) for i in range(1, MAX_QUANTITY + 1)], initial=1
+        label="Quantité", coerce=int, choices=[(i, i) for i in range(1, MAX_QUANTITY + 1)], required=False,
+        empty_value=1, widget=forms.HiddenInput, initial=1,
     )
 
     def __init__(self, *args, ring, **kwargs):
         super().__init__(*args, **kwargs)
         self.ring = ring
         self.fields["size"].choices = [(s, s) for s in ring.sizes]
-        # Changing the size reloads the page with the matching price (see site.js).
-        self.fields["size"].widget.attrs["data-price-preview"] = "taille"
-        if not ring.engravable:
+        self.fields["metal"].choices = [(m.code, m.name) for m in ring.available_metals()]
+        stone_ids = [(o.pk, o.pk) for o in ring.stone_options.all()]
+        self.fields["stone"].choices = stone_ids
+        self.fields["stone"].required = bool(stone_ids)
+        if ring.engravable:
+            self.fields["engraving"].max_length = ring.engraving_max_length
+            self.fields["engraving"].widget.attrs.update(
+                {"maxlength": ring.engraving_max_length, "placeholder": "Ex. : J & M — 12.06.2027"}
+            )
+            self.fields["engraving"].validators.append(MaxLengthValidator(ring.engraving_max_length))
+        else:
             del self.fields["engraving"]
 
     def clean_engraving(self):
         return self.cleaned_data.get("engraving", "").strip()
+
+    def clean_metal(self):
+        default = self.ring.default_metal()
+        return self.cleaned_data.get("metal") or (default.code if default else "")
+
+    def clean_comment(self):
+        return self.cleaned_data.get("comment", "").strip()
 
 
 COUNTRY_NAMES = {"FR": "France", "BE": "Belgique", "LU": "Luxembourg", "CH": "Suisse", "MC": "Monaco"}

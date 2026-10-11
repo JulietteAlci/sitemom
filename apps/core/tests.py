@@ -15,7 +15,7 @@ class CoreTests(TestCase):
 
     def test_seed_is_idempotent(self):
         call_command("seed_demo", stdout=open("/dev/null", "w"))
-        self.assertEqual(Ring.objects.count(), 12)
+        self.assertEqual(Ring.objects.count(), 17)  # 12 alliances + 5 solitaires
         self.assertEqual(GoldPrice.objects.count(), 1)
 
     def test_home(self):

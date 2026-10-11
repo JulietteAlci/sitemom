@@ -5,8 +5,68 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from apps.blog.models import FAQ, Category, Post
-from apps.catalog.models import Ring
+from apps.catalog.models import (
+    Collection,
+    JewelryCase,
+    Metal,
+    ModelFamily,
+    ProductFAQ,
+    Reassurance,
+    Review,
+    Ring,
+    StoneOption,
+)
 from apps.pricing.models import GoldPrice
+
+# Diamond cost per carat option (€ HT, purchase price): natural / lab-grown.
+DIAMOND_CARATS = [
+    ("0.10", 110, 40), ("0.15", 170, 55), ("0.20", 240, 70), ("0.25", 320, 90), ("0.30", 420, 110),
+    ("0.40", 700, 160), ("0.50", 1050, 210), ("0.70", 1900, 320), ("0.90", 2800, 430), ("1.00", 3600, 520),
+]
+# Coloured centre stones: (main_stone, product label, cost per carat option).
+GEMSTONES = [
+    ("saphir", "saphir", [("0.30", 160), ("0.50", 300)]),
+    ("rubis", "rubis", [("0.30", 190), ("0.50", 360)]),
+    ("emeraude", "émeraude", [("0.30", 180), ("0.50", 340)]),
+    ("diamant-noir", "diamant noir", [("0.30", 90), ("0.50", 150)]),
+]
+
+STORY = (
+    "Chaque bijou est dessiné, fondu, serti et poli dans notre atelier, en or 18 carats recyclé. "
+    "Nous maîtrisons toutes les étapes en interne pour garantir des lignes nettes, une tenue exemplaire "
+    "et une finition irréprochable.\n\n"
+    "Nos prix suivent le cours de l'or : vous payez le juste poids d'or de votre bijou, plus le travail de l'artisan."
+)
+
+PRODUCT_FAQ = [
+    ("Comment connaître ma taille de bague ?",
+     "Mesurez le tour d'une bague que vous portez déjà au même doigt, ou demandez notre coffret d'essai : "
+     "il contient un baguier. Votre taille correspond à votre tour de doigt en millimètres."),
+    ("Diamant naturel ou de synthèse : quelle différence ?",
+     "Les deux ont la même composition et le même éclat. Le diamant de synthèse est créé en laboratoire, "
+     "il est nettement moins cher à poids égal."),
+    ("Pourquoi le prix change-t-il d'un jour à l'autre ?",
+     "Le prix de l'or de votre bijou suit le cours de l'or. Le prix affiché est garanti 30 minutes une fois "
+     "le paiement engagé."),
+    ("Quels sont les délais de fabrication ?",
+     "La date de livraison maximale est indiquée sur chaque fiche produit. Besoin d'aller plus vite ? Contactez-nous."),
+    ("Comment mon bijou est-il livré ?",
+     "Dans son écrin, avec son certificat d'authenticité, par envoi assuré et dans un colis neutre."),
+]
+
+REASSURANCES = [
+    ("Livraison sécurisée offerte", "Envoi assuré dans un colis neutre, sans minimum d'achat.", "truck"),
+    ("Gravure offerte", "Personnalisez l'intérieur de votre bijou sans frais.", "ring"),
+    ("Prix au cours de l'or", "Vous payez le juste poids d'or de votre bijou.", "gold"),
+    ("Fabrication française", "Chaque bijou est façonné à la main dans notre atelier.", "sparkle"),
+]
+
+# Demo reviews: clearly labelled, replace them with genuine customer reviews before going live.
+DEMO_REVIEWS = [
+    ("Avis de démonstration", 5, "Exemple d'avis client : remplacez-moi par un véritable avis dans l'administration."),
+    ("Avis de démonstration", 5, "Les avis affichés doivent provenir de vrais clients (obligation légale)."),
+    ("Avis de démonstration", 4, "Vous pouvez importer vos avis depuis votre outil d'avis vérifiés."),
+]
 
 RINGS = [
     # name, gender, color, width, thickness, profile, finish, weight@54, stones, stone_cost, featured
@@ -104,6 +164,7 @@ class Command(BaseCommand):
                 ),
             )
         self.stdout.write(f"{len(RINGS)} alliances créées ou mises à jour")
+        self.seed_product_structure()
 
         for data in POSTS:
             category, _ = Category.objects.get_or_create(
@@ -126,3 +187,76 @@ class Command(BaseCommand):
             )
             post.related_rings.set(Ring.objects.filter(is_featured=True)[:4])
         self.stdout.write(self.style.SUCCESS(f"{len(POSTS)} articles créés ou mis à jour"))
+
+    def seed_product_structure(self):
+        metals = {metal.code: metal for metal in Metal.objects.all()}
+        golds = [metals[code] for code in ("jaune", "blanc", "rose") if code in metals]
+        bands, _ = Collection.objects.update_or_create(
+            slug="alliances", defaults={"name": "Alliances", "position": 0,
+                                        "description": "Alliances homme et femme en or 18 carats."}
+        )
+        solitaires, _ = Collection.objects.update_or_create(
+            slug="bagues-solitaires", defaults={"name": "Bagues solitaires", "position": 1,
+                                                "description": "Solitaires en or 18 carats, pierre centrale au choix."}
+        )
+        case, _ = JewelryCase.objects.update_or_create(
+            name="Écrin de la maison",
+            defaults={"description": "Écrin en bois laqué et velours, livré avec son certificat d'authenticité."},
+        )
+        for ring in Ring.objects.filter(category=Ring.Category.WEDDING_BAND):
+            ring.collections.add(bands)
+            if ring.color != "bicolore":
+                ring.metals.set(golds)
+            ring.jewelry_case = ring.jewelry_case or case
+            ring.story = ring.story or STORY
+            ring.save()
+
+        family, _ = ModelFamily.objects.get_or_create(name="Éclat")
+        common = dict(
+            category=Ring.Category.SOLITAIRE, gender=Ring.Gender.WOMEN, family=family, color="jaune",
+            width_mm=Decimal("1.8"), thickness_mm=Decimal("1.6"), profile="demi-jonc", finish="poli",
+            reference_weight_g=Decimal("2.40"), labor_cost=Decimal("240"), engraving_max_length=100,
+            lead_time_days=21, jewelry_case=case, story=STORY,
+        )
+        products = [("diamant", "diamant", None)] + GEMSTONES
+        for position, (stone, label, carats) in enumerate(products):
+            ring, _ = Ring.objects.update_or_create(
+                slug=slugify(f"solitaire {label} eclat"),
+                defaults=dict(
+                    common,
+                    name=f"Solitaire {label} Éclat",
+                    main_stone=stone,
+                    position=100 + position,
+                    is_featured=stone == "diamant",
+                    short_description=f"Solitaire en or 18 carats serti d'un {label} sur six griffes.",
+                    description=(
+                        f"Un anneau fin qui s'affine vers la pierre et un {label} tenu par six griffes : "
+                        "un dessin intemporel, conçu pour s'accorder avec une alliance."
+                    ),
+                ),
+            )
+            ring.collections.set([solitaires])
+            ring.metals.set(golds)
+            ring.stone_options.all().delete()
+            if stone == "diamant":
+                options = []
+                for carat, natural, lab in DIAMOND_CARATS:
+                    options.append(StoneOption(ring=ring, stone_type="naturel", carat=Decimal(carat),
+                                               price=Decimal(natural), color_grade="G", clarity="VS"))
+                    options.append(StoneOption(ring=ring, stone_type="synthese", carat=Decimal(carat),
+                                               price=Decimal(lab), color_grade="F", clarity="VS1"))
+            else:
+                options = [StoneOption(ring=ring, stone_type="naturel", carat=Decimal(carat), price=Decimal(cost))
+                           for carat, cost in carats]
+            StoneOption.objects.bulk_create(options)
+
+        for position, (question, answer) in enumerate(PRODUCT_FAQ):
+            ProductFAQ.objects.update_or_create(question=question, defaults={"answer": answer, "position": position})
+        for position, (title, text, icon) in enumerate(REASSURANCES):
+            Reassurance.objects.update_or_create(title=title, defaults={"text": text, "icon": icon, "position": position})
+        if not Review.objects.exists():
+            Review.objects.bulk_create(
+                Review(author=author, rating=rating, text=text, verified_purchase=False)
+                for author, rating, text in DEMO_REVIEWS
+            )
+        self.stdout.write("Collections, solitaires Éclat (5 pierres), FAQ, réassurance et avis de démonstration créés")

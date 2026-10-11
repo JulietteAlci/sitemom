@@ -81,15 +81,19 @@ def cart_add(request, slug):
     ring = get_object_or_404(Ring, slug=slug, is_active=True)
     form = AddToCartForm(request.POST, ring=ring)
     if not form.is_valid():
-        messages.error(request, "Merci de vérifier la taille et la gravure choisies.")
+        messages.error(request, "Merci de vérifier les options choisies (métal, pierre, taille, gravure).")
         return redirect(ring)
+    data = form.cleaned_data
     Cart(request).add(
         ring,
-        size=form.cleaned_data["size"],
-        engraving=form.cleaned_data.get("engraving", ""),
-        quantity=form.cleaned_data["quantity"],
+        size=data["size"],
+        engraving=data.get("engraving", ""),
+        quantity=data["quantity"] or 1,
+        metal=data["metal"],
+        stone_id=data.get("stone"),
+        comment=data.get("comment", ""),
     )
-    messages.success(request, f"« {ring.name} » a été ajoutée à votre panier.")
+    messages.success(request, f"« {ring.name} » a été ajouté à votre panier.")
     return redirect("orders:cart")
 
 
@@ -134,7 +138,10 @@ def checkout(request):
                 ring=line.ring,
                 ring_name=line.ring.name,
                 size=line.size,
+                metal=line.metal.name if line.metal else "",
+                stone=str(line.stone) if line.stone else "",
                 engraving=line.engraving,
+                comment=line.comment,
                 quantity=line.quantity,
                 unit_price=line.unit_price,
                 weight_g=line.breakdown.weight_g,
@@ -143,7 +150,7 @@ def checkout(request):
         )
     items = [
         payments.line_item(
-            name=f"{line.ring.name} — taille {line.size}",
+            name=f"{line.ring.name} — {line.description}",
             amount_cents=line.breakdown.amount_cents,
             quantity=line.quantity,
             description=f"Gravure : {line.engraving}" if line.engraving else "",

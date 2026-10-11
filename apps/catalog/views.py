@@ -1,10 +1,11 @@
-from django.db.models import Q
+from django.db.models import Avg, Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 
 from apps.orders.forms import AddToCartForm
 
-from .models import Ring
+from .models import Collection, ProductFAQ, Reassurance, Review, Ring
+from .selection import resolve_selection, selectors
 
 GENDER_PAGES = {
     Ring.Gender.MEN: {
@@ -41,7 +42,7 @@ ALL_RINGS_PAGE = {
 }
 
 FILTERS = {
-    "couleur": ("color", Ring.Color.choices),
+    "couleur": ("metals__code", Ring.Color.choices),
     "titre": ("purity", Ring.Purity.choices),
     "profil": ("profile", Ring.Profile.choices),
 }
@@ -59,7 +60,12 @@ def _apply_filters(queryset, params):
         value = params.get(param)
         valid = {str(key) for key, _ in choices}
         if value in valid:
-            queryset = queryset.filter(**{field: value})
+            if param == "couleur":
+                # Metals offered, or the default colour when no metal list is set.
+                condition = Q(metals__code=value) | Q(metals__isnull=True, color=value)
+            else:
+                condition = Q(**{field: value})
+            queryset = queryset.filter(condition).distinct()
             active[param] = value
     return queryset, active
 
@@ -100,27 +106,74 @@ def ring_list(request, gender=None):
 
 
 def ring_detail(request, slug):
-    ring = get_object_or_404(Ring, slug=slug, is_active=True)
-    size = request.GET.get("taille")
-    try:
-        size = int(size)
-    except (TypeError, ValueError):
-        size = ring.reference_size
-    if not ring.is_valid_size(size):
-        size = ring.reference_size
-    related = (
-        Ring.objects.filter(is_active=True, gender__in=[ring.gender, Ring.Gender.UNISEX])
-        .exclude(pk=ring.pk)
-        .order_by("-is_featured", "position")[:4]
+    ring = get_object_or_404(
+        Ring.objects.select_related("family", "jewelry_case").prefetch_related("metals", "images", "stone_options"),
+        slug=slug,
+        is_active=True,
     )
+    selection = resolve_selection(ring, request.GET)
+    breakdown = ring.price(selection.size, stone=selection.stone)
+    form = AddToCartForm(
+        ring=ring,
+        initial={
+            "size": selection.size,
+            "metal": selection.metal.code if selection.metal else "",
+            "stone": selection.stone.pk if selection.stone else None,
+        },
+    )
+    siblings = (
+        Ring.objects.filter(family=ring.family, is_active=True).exclude(pk=ring.pk).prefetch_related("metals")
+        if ring.family_id
+        else Ring.objects.none()
+    )
+    collection = ring.collections.first()
+    same_collection = (
+        collection.rings.filter(is_active=True).exclude(pk=ring.pk).prefetch_related("metals")[:8]
+        if collection
+        else Ring.objects.filter(is_active=True, category=ring.category).exclude(pk=ring.pk)[:8]
+    )
+    reviews = Review.objects.filter(is_published=True)
+    review_stats = reviews.aggregate(count=Count("pk"), average=Avg("rating"))
+    product_reviews = ring.reviews.filter(is_published=True).aggregate(count=Count("pk"), average=Avg("rating"))
     return render(
         request,
         "catalog/ring_detail.html",
         {
             "ring": ring,
-            "size": size,
-            "breakdown": ring.price(size),
-            "form": AddToCartForm(ring=ring, initial={"size": size}),
-            "related": [(r, r.starting_price) for r in related],
+            "selection": selection,
+            "size": selection.size,
+            "selectors": selectors(selection),
+            "gallery": ring.gallery(selection.metal),
+            "breakdown": breakdown,
+            "form": form,
+            "delivery_date": ring.delivery_date(),
+            "siblings": [(r, r.starting_price) for r in siblings],
+            "collection": collection,
+            "same_collection": [(r, r.starting_price) for r in same_collection],
+            "reviews": reviews[:12],
+            "review_stats": review_stats,
+            "product_reviews": product_reviews,
+            "faqs": ProductFAQ.objects.filter(is_active=True),
+            "reassurances": Reassurance.objects.all(),
+        },
+    )
+
+
+def collection_detail(request, slug):
+    collection = get_object_or_404(Collection, slug=slug)
+    rings = collection.rings.filter(is_active=True).prefetch_related("metals")
+    return render(
+        request,
+        "catalog/ring_list.html",
+        {
+            "items": [(ring, ring.starting_price) for ring in rings],
+            "page": {
+                "title": collection.name,
+                "meta_description": collection.meta_description or collection.description[:160],
+                "intro": collection.description,
+            },
+            "filter_groups": [],
+            "sorts": [],
+            "current_sort": "",
         },
     )

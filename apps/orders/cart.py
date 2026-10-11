@@ -3,7 +3,7 @@ import uuid
 from dataclasses import dataclass
 from decimal import Decimal
 
-from apps.catalog.models import Ring
+from apps.catalog.models import Metal, Ring, StoneOption
 from apps.pricing.models import GoldPrice
 from apps.pricing.services import PriceBreakdown
 from apps.trialkit.models import TrialKitOrder
@@ -19,6 +19,15 @@ class CartLine:
     engraving: str
     quantity: int
     breakdown: PriceBreakdown | None
+    metal: Metal | None = None
+    stone: StoneOption | None = None
+    comment: str = ""
+
+    @property
+    def description(self) -> str:
+        """Options summary, e.g. "Or jaune · Diamant naturel 0,50 carat · taille 54"."""
+        parts = [self.metal.name if self.metal else "", str(self.stone) if self.stone else "", f"taille {self.size}"]
+        return " · ".join(part for part in parts if part)
 
     @property
     def unit_price(self) -> Decimal | None:
@@ -74,20 +83,18 @@ class Cart:
         self.session[self.SESSION_KEY] = self._items
         self.session.modified = True
 
-    def add(self, ring: Ring, size: int, engraving: str = "", quantity: int = 1):
+    def add(
+        self, ring: Ring, size: int, engraving: str = "", quantity: int = 1, metal: str = "",
+        stone_id: int | None = None, comment: str = "",
+    ):
+        options = {"size": size, "engraving": engraving, "metal": metal, "stone_id": stone_id, "comment": comment}
         for item in self._items:
-            if item["ring_id"] == ring.pk and item["size"] == size and item["engraving"] == engraving:
+            if item["ring_id"] == ring.pk and all(item.get(key, "") == value for key, value in options.items()):
                 item["quantity"] = min(item["quantity"] + quantity, MAX_QUANTITY)
                 break
         else:
             self._items.append(
-                {
-                    "id": uuid.uuid4().hex[:12],
-                    "ring_id": ring.pk,
-                    "size": size,
-                    "engraving": engraving,
-                    "quantity": min(quantity, MAX_QUANTITY),
-                }
+                {"id": uuid.uuid4().hex[:12], "ring_id": ring.pk, "quantity": min(quantity, MAX_QUANTITY), **options}
             )
         self._save()
 
@@ -111,6 +118,12 @@ class Cart:
             ring = rings.get(item["ring_id"])
             if ring is None or not ring.is_valid_size(item["size"]):
                 continue  # product removed or size range changed since it was added
+            metals = ring.available_metals()
+            metal = next((m for m in metals if m.code == item.get("metal")), None) or ring.default_metal()
+            options = {option.pk: option for option in ring.stone_options.all()}
+            stone = options.get(item.get("stone_id"))
+            if options and stone is None:
+                continue  # stone option removed since it was added
             lines.append(
                 CartLine(
                     id=item["id"],
@@ -118,7 +131,10 @@ class Cart:
                     size=item["size"],
                     engraving=item["engraving"],
                     quantity=item["quantity"],
-                    breakdown=ring.price(item["size"], spot) if spot else None,
+                    breakdown=ring.price(item["size"], spot, stone) if spot else None,
+                    metal=metal,
+                    stone=stone,
+                    comment=item.get("comment", ""),
                 )
             )
         return lines

@@ -42,6 +42,12 @@ CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 SITE_URL = env("SITE_URL", "http://localhost:8000").rstrip("/")
 SITE_NAME = env("SITE_NAME", "Maison Alliance")
+# Contact shown on product pages ("besoin de ce bijou en urgence ?") — leave empty to hide.
+SITE_PHONE = env("SITE_PHONE", "")
+SITE_WHATSAPP = env("SITE_WHATSAPP", "")
+SITE_EMAIL = env("SITE_EMAIL", "")
+# Return / withdrawal period shown on product pages (14 days = legal minimum in France).
+RETURN_DAYS = int(env("RETURN_DAYS", "14"))
 
 INSTALLED_APPS = [
     "django.contrib.admin",

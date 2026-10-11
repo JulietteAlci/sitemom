@@ -9,5 +9,9 @@ def site(request):
         "TRIAL_KIT_MIN": settings.TRIAL_KIT_MIN,
         "TRIAL_KIT_MAX": settings.TRIAL_KIT_MAX,
         "STRIPE_DEMO_MODE": settings.STRIPE_DEMO_MODE,
+        "SITE_PHONE": settings.SITE_PHONE,
+        "SITE_WHATSAPP": settings.SITE_WHATSAPP,
+        "SITE_EMAIL": settings.SITE_EMAIL,
+        "RETURN_DAYS": settings.RETURN_DAYS,
         "TRIAL_KIT_PRICE": settings.TRIAL_KIT_PRICE_CENTS // 100,
     }

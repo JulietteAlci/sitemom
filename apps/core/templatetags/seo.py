@@ -55,7 +55,8 @@ def breadcrumb_jsonld(*crumbs):
 
 
 @register.simple_tag
-def product_jsonld(ring, breakdown):
+def product_jsonld(ring, breakdown, reviews=None):
+    """`reviews`: {"count", "average"} of reviews about this product only (never shop-wide ones)."""
     data = {
         "@context": "https://schema.org",
         "@type": "Product",
@@ -71,8 +72,15 @@ def product_jsonld(ring, breakdown):
             {"@type": "PropertyValue", "name": "Finition", "value": ring.get_finish_display()},
         ],
     }
-    if ring.image:
-        data["image"] = _abs(ring.image.url)
+    cover = ring.cover_image
+    if cover:
+        data["image"] = _abs(cover.url)
+    if reviews and reviews.get("count"):
+        data["aggregateRating"] = {
+            "@type": "AggregateRating",
+            "ratingValue": f"{reviews['average']:.1f}",
+            "reviewCount": reviews["count"],
+        }
     if breakdown:
         data["offers"] = {
             "@type": "Offer",

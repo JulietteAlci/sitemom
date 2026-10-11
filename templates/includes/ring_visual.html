@@ -1,7 +1,11 @@
-{% if ring.image %}
-  <img src="{{ ring.image.url }}" alt="{{ ring.name }} — alliance {{ ring.get_color_display|lower }} {{ ring.carats }} carats" loading="lazy">
+{% with cover=ring.cover_image %}{% if cover %}
+  <img src="{{ cover.url }}" alt="{{ ring.name }} — {{ ring.get_color_display|lower }} {{ ring.carats }} carats" loading="lazy">
 {% else %}
-  <svg class="ring-visual ring-visual--{{ ring.color }}" viewBox="0 0 200 200" role="img" aria-label="{{ ring.name }}">
-    <ellipse cx="100" cy="100" rx="70" ry="70" fill="none" stroke-width="{% widthratio ring.width_mm 1 4 %}"/>
+  <svg class="ring-visual ring-visual--{{ metal_code|default:ring.color }}" viewBox="0 0 200 200" role="img" aria-label="{{ ring.name }}">
+    <ellipse cx="100" cy="112" rx="66" ry="66" fill="none" stroke-width="{% if ring.main_stone %}9{% else %}{% widthratio ring.width_mm 1 4 %}{% endif %}"/>
+    {% if ring.main_stone %}
+      <g class="ring-visual__setting"><path d="M82 52 L100 24 L118 52 Z"/></g>
+      <circle class="ring-visual__stone ring-visual__stone--{{ ring.main_stone }}" cx="100" cy="36" r="17"/>
+    {% endif %}
   </svg>
-{% endif %}
+{% endif %}{% endwith %}

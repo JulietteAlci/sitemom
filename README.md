@@ -17,6 +17,24 @@ Site Django + Stripe d'alliances en or premium, au **prix indexé sur le cours s
 | SEO technique : `sitemap.xml`, `robots.txt`, canonical, Open Graph, JSON-LD Product/Organization | `apps/core` |
 | GEO (moteurs IA) : `/llms.txt` généré dynamiquement (catalogue, prix, FAQ) | `apps/core` |
 
+## Structure des produits
+
+La fiche produit reprend le format d'une fiche joaillerie : galerie, sélecteurs **Métal / Type de pierre / Poids carat / Taille**, gravure, commentaire, date de livraison, onglets **Description / Détails / Écrin**, « Existe aussi en », avis, « Dans la même collection », certificat, FAQ et réassurance.
+
+| Table (admin) | Rôle |
+|---|---|
+| **Bijou** (`Ring`) | La fiche : catégorie (alliance, solitaire, bague), genre, pierre centrale, textes des onglets, délai de fabrication, poids d'or de référence, façon, marge |
+| **Métal** | Couleurs d'or du sélecteur « Métal » (or jaune, blanc, rose…), avec pastille. Tous les métaux d'un bijou ont le même titre (18 ct), donc le même prix |
+| **Option de pierre** | Une ligne par couple *type de pierre × poids carat* (ex. diamant naturel 0,50 ct), avec son coût d'achat HT |
+| **Photo** | Galerie, éventuellement propre à un métal |
+| **Collection** | « Dans la même collection » et pages `/alliances/collection/<slug>/` |
+| **Famille de modèle** | Déclinaisons d'un même dessin avec d'autres pierres (« Existe aussi en ») |
+| **Écrin** | Contenu de l'onglet « Écrin » |
+| **Avis client** | Avis de la boutique (ou d'un produit). N'afficher que de vrais avis |
+| **Question fréquente (fiches produit)** et **Bloc de réassurance** | Sections communes à toutes les fiches |
+
+Prix d'une variante : `[poids d'or selon la taille × titre × cours du jour × (1 + prime) + façon + petites pierres + coût de la pierre choisie] × (1 + marge) × 1,20`. Seul l'or suit le cours.
+
 ## Parcours client et coffret d'essai
 
 1. Le client commande le coffret d'essai (80 €, `TRIAL_KIT_PRICE_CENTS`) : un code unique `ESSAI-XXXX-XXXX` lui est remis sur la page de confirmation.

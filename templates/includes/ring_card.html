@@ -2,7 +2,11 @@
   <a href="{{ ring.get_absolute_url }}" class="card__link">
     <div class="card__visual">{% include "includes/ring_visual.html" %}</div>
     <h3 class="card__title">{{ ring.name }}</h3>
-    <p class="card__meta">{{ ring.get_color_display }} {{ ring.carats }} ct · {{ ring.width_mm }} mm</p>
-    <p class="card__price">{% if price %}À partir de {{ price.price_ttc|euros }}{% else %}Prix sur demande{% endif %}</p>
+    <p class="card__price">{% if price %}Dès {{ price.price_ttc|euros }}{% else %}Prix sur demande{% endif %}</p>
   </a>
+  {% with metals=ring.available_metals %}{% if metals|length > 1 %}
+  <ul class="swatches" aria-label="Métaux disponibles">
+    {% for metal in metals %}<li><a href="{{ ring.get_absolute_url }}?metal={{ metal.code }}" class="swatch" style="background:{{ metal.swatch }}" title="{{ metal.name }}"><span class="visually-hidden">{{ metal.name }}</span></a></li>{% endfor %}
+  </ul>
+  {% endif %}{% endwith %}
 </article>

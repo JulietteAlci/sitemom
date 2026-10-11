@@ -51,8 +51,12 @@ class PriceBreakdown:
         return int(self.price_ttc * 100)
 
 
-def compute_ring_price(ring, size: int | None = None, spot: GoldPrice | None = None) -> PriceBreakdown | None:
+def compute_ring_price(
+    ring, size: int | None = None, spot: GoldPrice | None = None, stone=None
+) -> PriceBreakdown | None:
     """Price = ((fine gold weight × spot €/g) × (1 + gold markup) + labour + stones) × (1 + margin), + VAT.
+
+    `stone` is the selected StoneOption (centre stone), whose price is added to the fixed stones.
 
     The TTC price is rounded up to the euro. Returns None if no spot price is known.
     """
@@ -62,7 +66,8 @@ def compute_ring_price(ring, size: int | None = None, spot: GoldPrice | None = N
     weight = ring.weight_for_size(size or ring.reference_size)
     fine_gold = weight * Decimal(ring.purity) / Decimal(1000)
     gold_value = fine_gold * spot.price_per_gram_eur
-    cost = gold_value * (1 + ring.gold_markup_rate) + ring.labor_cost + ring.stone_cost
+    stones = ring.stone_cost + (stone.price if stone else 0)
+    cost = gold_value * (1 + ring.gold_markup_rate) + ring.labor_cost + stones
     price_ht = cost * (1 + ring.margin_rate)
     vat_rate = Decimal(settings.VAT_RATE)
     price_ttc = (price_ht * (1 + vat_rate)).quantize(Decimal(1), rounding=ROUND_CEILING)

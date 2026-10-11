@@ -26,3 +26,15 @@ document.querySelectorAll(".trial-form").forEach((form) => {
   boxes.forEach((box) => box.addEventListener("change", update));
   update();
 });
+
+// Character counters ("Caractères utilisés : 0 / 200").
+document.querySelectorAll("[data-char-count-for]").forEach((counter) => {
+  const field = document.getElementById(counter.dataset.charCountFor);
+  if (!field) return;
+  const max = field.getAttribute("maxlength");
+  const update = () => {
+    counter.textContent = `Caractères utilisés : ${field.value.length} / ${max}`;
+  };
+  field.addEventListener("input", update);
+  update();
+});
