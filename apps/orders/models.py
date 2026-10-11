@@ -1,4 +1,5 @@
 import secrets
+from datetime import timedelta
 
 from django.db import models
 from django.utils import timezone
@@ -17,15 +18,17 @@ class StripeCheckoutMixin(models.Model):
         CANCELLED = "cancelled", "Annulée / expirée"
 
     reference = models.CharField("référence", max_length=24, unique=True, editable=False)
-    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING, db_index=True)
+    status = models.CharField(
+        "statut", max_length=12, choices=Status.choices, default=Status.PENDING, db_index=True
+    )
     email = models.EmailField(blank=True)
     full_name = models.CharField("nom", max_length=200, blank=True)
     phone = models.CharField("téléphone", max_length=40, blank=True)
     shipping_address = models.JSONField("adresse de livraison", default=dict, blank=True)
     stripe_session_id = models.CharField(max_length=255, blank=True, db_index=True)
     stripe_payment_intent = models.CharField(max_length=255, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    paid_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField("créée le", auto_now_add=True)
+    paid_at = models.DateTimeField("payée le", null=True, blank=True)
 
     REFERENCE_PREFIX = "CMD"
 
@@ -68,6 +71,20 @@ class StripeCheckoutMixin(models.Model):
 
 
 class Order(StripeCheckoutMixin):
+    class Fulfillment(models.TextChoices):
+        TO_MAKE = "to_make", "À fabriquer"
+        IN_PRODUCTION = "in_production", "En fabrication"
+        SHIPPED = "shipped", "Expédiée"
+        DELIVERED = "delivered", "Livrée"
+
+    # Days between shipping and delivery, used to compute the "ship by" date.
+    SHIPPING_DAYS = 2
+    DEFAULT_LEAD_TIME_DAYS = 21
+
+    fulfillment = models.CharField(
+        "fabrication", max_length=14, choices=Fulfillment.choices, default=Fulfillment.TO_MAKE, db_index=True
+    )
+    shipped_at = models.DateTimeField("expédiée le", null=True, blank=True)
     total = models.DecimalField("total payé TTC (€)", max_digits=10, decimal_places=2)
     discount = models.DecimalField("déduction coffret (€)", max_digits=8, decimal_places=2, default=0)
     trial_kit = models.ForeignKey(
@@ -85,6 +102,20 @@ class Order(StripeCheckoutMixin):
     @property
     def subtotal(self):
         return self.total + self.discount
+
+    @property
+    def delivery_deadline(self):
+        """Latest delivery date promised on the product pages (payment date + longest lead time)."""
+        if not self.paid_at:
+            return None
+        lead_times = [item.ring.lead_time_days for item in self.items.all() if item.ring]
+        days = max(lead_times, default=self.DEFAULT_LEAD_TIME_DAYS)
+        return timezone.localdate(self.paid_at) + timedelta(days=days)
+
+    @property
+    def ship_by(self):
+        deadline = self.delivery_deadline
+        return deadline - timedelta(days=self.SHIPPING_DAYS) if deadline else None
 
     def mark_paid(self, session: dict) -> bool:
         changed = super().mark_paid(session)

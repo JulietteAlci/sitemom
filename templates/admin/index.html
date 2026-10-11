@@ -1,0 +1,44 @@
+{% extends "admin/index.html" %}
+{% load backoffice humanize %}
+
+{% block content %}
+{% dashboard as stats %}
+<section class="dash">
+  <div class="dash__hello">
+    <p class="dash__date">{% now "l j F Y" %}</p>
+    <h2>Bonjour {{ user.first_name|default:user.username }}</h2>
+  </div>
+
+  <div class="dash__tasks">
+    <a class="task-btn task-btn--day" href="{% url 'backoffice:tasks' %}?periode=jour">
+      <span class="task-btn__icon" aria-hidden="true">☀</span>
+      <span class="task-btn__label">Tâches du jour</span>
+      <span class="task-btn__count">{{ stats.today_count }}</span>
+    </a>
+    <a class="task-btn task-btn--week" href="{% url 'backoffice:tasks' %}?periode=semaine">
+      <span class="task-btn__icon" aria-hidden="true">▦</span>
+      <span class="task-btn__label">Tâches de la semaine</span>
+      <span class="task-btn__count">{{ stats.week_count }}</span>
+    </a>
+  </div>
+
+  <div class="kpis">
+    <a class="kpi" href="{% url 'admin:orders_order_changelist' %}?status__exact=paid&fulfillment__in=to_make,in_production">
+      <span class="kpi__label">Commandes à traiter</span><span class="kpi__value">{{ stats.orders_open }}</span>
+    </a>
+    <a class="kpi" href="{% url 'admin:trialkit_trialkitorder_changelist' %}?status__exact=paid&fulfillment__exact=to_prepare">
+      <span class="kpi__label">Coffrets à expédier</span><span class="kpi__value">{{ stats.kits_to_ship }}</span>
+    </a>
+    <a class="kpi" href="{% url 'admin:orders_order_changelist' %}?status__exact=paid">
+      <span class="kpi__label">Chiffre d'affaires du mois</span><span class="kpi__value">{{ stats.revenue_month|floatformat:0|intcomma }} €</span>
+      <span class="kpi__sub">{{ stats.orders_month }} commande{{ stats.orders_month|pluralize }}</span>
+    </a>
+    <a class="kpi" href="{% url 'admin:pricing_goldprice_changelist' %}">
+      <span class="kpi__label">Cours de l'or</span>
+      <span class="kpi__value">{% if stats.gold %}{{ stats.gold.price_per_gram_eur|floatformat:2 }} €/g{% else %}—{% endif %}</span>
+      <span class="kpi__sub{% if stats.gold and not stats.gold.is_fresh %} kpi__sub--alert{% endif %}">{% if stats.gold %}{% if stats.gold.is_fresh %}à jour · {{ stats.gold.fetched_at|date:"d/m H:i" }}{% else %}périmé : paiements suspendus{% endif %}{% else %}aucun cours{% endif %}</span>
+    </a>
+  </div>
+</section>
+{{ block.super }}
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:"Administration" }}{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Cormorant+Garamond:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'admin_custom/admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+  <div id="site-name"><a href="{% url 'admin:index' %}"><span class="brand-mark" aria-hidden="true">◯</span>{{ site_header|default:"Administration" }}</a></div>
+  {% if user.is_anonymous %}{% include "admin/color_theme_toggle.html" %}{% endif %}
+{% endblock %}
+
+{% block usertools %}
+  {% if has_permission %}
+    <nav class="quick-nav" aria-label="Raccourcis">
+      <a class="quick-nav__btn{% if period == 'jour' %} is-active{% endif %}" href="{% url 'backoffice:tasks' %}?periode=jour">☀ Tâches du jour</a>
+      <a class="quick-nav__btn{% if period == 'semaine' %} is-active{% endif %}" href="{% url 'backoffice:tasks' %}?periode=semaine">▦ Tâches de la semaine</a>
+    </nav>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

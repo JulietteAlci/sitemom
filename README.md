@@ -35,6 +35,20 @@ La fiche produit reprend le format d'une fiche joaillerie : galerie, sélecteurs
 
 Prix d'une variante : `[poids d'or selon la taille × titre × cours du jour × (1 + prime) + façon + petites pierres + coût de la pierre choisie] × (1 + marge) × 1,20`. Seul l'or suit le cours.
 
+## Administration et tâches
+
+L'admin (`/admin/`) a un thème clair/sombre épuré et un **tableau de bord** : boutons **Tâches du jour** et **Tâches de la semaine** (7 prochains jours), commandes à traiter, coffrets à expédier, chiffre d'affaires du mois et cours de l'or.
+
+La liste des tâches (`/admin/taches/`) réunit :
+- les **tâches manuelles** (ajout rapide en haut de la page, ou table « Tâches ») ;
+- les **tâches automatiques**, qui disparaissent d'elles-mêmes une fois traitées :
+  - coffret payé → *préparer et expédier* (sous 24 h) ;
+  - coffret expédié → *vérifier le retour* après `TRIAL_KIT_RETURN_DAYS` jours (14 par défaut) ;
+  - commande payée → *lancer la fabrication*, puis *expédier* avant la date de livraison promise ;
+  - cours de l'or périmé → *mettre à jour le cours*.
+
+Chaque tâche a un bouton d'action rapide (« Marquer expédié », « Passer en fabrication », « Terminer »…). Les tâches en retard apparaissent en rouge, en tête de liste.
+
 ## Parcours client et coffret d'essai
 
 1. Le client commande le coffret d'essai (80 €, `TRIAL_KIT_PRICE_CENTS`) : un code unique `ESSAI-XXXX-XXXX` lui est remis sur la page de confirmation.

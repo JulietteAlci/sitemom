@@ -1,0 +1,68 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Tableau de bord</a> › Tâches</div>
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+
+{% block content %}
+<div class="tasks">
+  <header class="tasks__head">
+    <div>
+      <h1>{% if period == "jour" %}Tâches du jour{% else %}Tâches de la semaine{% endif %}</h1>
+      <p class="tasks__meta">
+        {% if period == "jour" %}{% now "l j F" %}{% else %}Jusqu'au {{ end|date:"l j F" }}{% endif %}
+        · {{ tasks|length }} tâche{{ tasks|length|pluralize }}{% if overdue_count %} · <span class="tasks__late">{{ overdue_count }} en retard</span>{% endif %}
+      </p>
+    </div>
+    <div class="segmented" role="tablist">
+      {% for key, label in periods.items %}
+        <a role="tab" href="?periode={{ key }}"{% if key == period %} aria-selected="true" class="is-active"{% endif %}>{{ label }}</a>
+      {% endfor %}
+    </div>
+  </header>
+
+  <form method="post" class="quick-add">
+    {% csrf_token %}
+    {{ form.title }}
+    {{ form.due_date }}
+    {{ form.priority }}
+    <button type="submit" class="button default">Ajouter</button>
+    {% if form.errors %}<p class="errornote">Merci de vérifier la tâche saisie.</p>{% endif %}
+  </form>
+
+  {% if tasks %}
+    <ul class="task-list">
+      {% for task in tasks %}
+        <li class="task{% if task.overdue %} task--late{% elif task.high_priority %} task--high{% endif %}">
+          <span class="task__badge task__badge--{{ task.kind|slugify }}">{{ task.kind }}</span>
+          <div class="task__body">
+            <a class="task__title" href="{{ task.url }}">{{ task.title }}</a>
+            {% if task.detail %}<p class="task__detail">{{ task.detail }}</p>{% endif %}
+          </div>
+          <span class="task__due">
+            {% if task.overdue %}En retard · {{ task.due|date:"d/m" }}{% elif task.due_today %}Aujourd'hui{% else %}{{ task.due|date:"l d/m" }}{% endif %}
+          </span>
+          <div class="task__actions">
+            {% for label, action, pk in task.actions %}
+              <form method="post" action="{% url 'backoffice:task_action' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action }}">
+                <input type="hidden" name="pk" value="{{ pk }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="task__btn">{{ label }}</button>
+              </form>
+            {% endfor %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="tasks__empty">
+      <p class="tasks__empty-icon" aria-hidden="true">✓</p>
+      <p>Rien à faire {% if period == "jour" %}aujourd'hui{% else %}cette semaine{% endif %}. Profitez-en !</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

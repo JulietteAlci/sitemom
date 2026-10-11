@@ -12,8 +12,9 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("reference", "created_at", "status", "full_name", "email", "total", "discount")
-    list_filter = ("status",)
+    list_display = ("reference", "created_at", "status", "fulfillment", "full_name", "email", "total", "discount")
+    list_editable = ("fulfillment",)
+    list_filter = ("status", "fulfillment")
     search_fields = ("reference", "email", "full_name", "stripe_session_id")
     readonly_fields = (
         "reference",
@@ -25,6 +26,7 @@ class OrderAdmin(admin.ModelAdmin):
         "stripe_payment_intent",
         "created_at",
         "paid_at",
+        "shipped_at",
         "shipping_address",
     )
     inlines = [OrderItemInline]

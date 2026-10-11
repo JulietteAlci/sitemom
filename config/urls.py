@@ -14,9 +14,12 @@ sitemaps = {
     "journal": BlogPostSitemap,
 }
 
-admin.site.site_header = f"{settings.SITE_NAME} — administration"
+admin.site.site_header = f"{settings.SITE_NAME}"
+admin.site.site_title = f"{settings.SITE_NAME} — administration"
+admin.site.index_title = "Tableau de bord"
 
 urlpatterns = [
+    path("admin/taches/", include("apps.backoffice.urls")),
     path("admin/", admin.site.urls),
     path(
         "sitemap.xml",

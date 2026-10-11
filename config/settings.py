@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "apps.blog",
     "apps.orders",
     "apps.trialkit",
+    "apps.backoffice",
 ]
 
 MIDDLEWARE = [
@@ -175,3 +176,5 @@ TRIAL_KIT_MIN = int(env("TRIAL_KIT_MIN", "8"))
 TRIAL_KIT_MAX = int(env("TRIAL_KIT_MAX", "12"))
 # Price of the trial kit, deducted from the ring order via a unique code (not refunded otherwise).
 TRIAL_KIT_PRICE_CENTS = int(env("TRIAL_KIT_PRICE_CENTS", "8000"))
+# Days after shipping before the "check the kit came back" task shows up.
+TRIAL_KIT_RETURN_DAYS = int(env("TRIAL_KIT_RETURN_DAYS", "14"))
